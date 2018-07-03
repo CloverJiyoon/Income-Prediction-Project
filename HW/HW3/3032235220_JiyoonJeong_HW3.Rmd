@@ -1,0 +1,571 @@
+---
+title: "154HW3"
+author: "Jiyoon Clover Jeong"
+date: "9/27/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+
+
+## 1.
+
+
+Since residual is $e_{i} = y_{i} - \hat{y_{i}}$, sum of residual can be written as \[\sum_{i=1}^{n} y_{i} - \hat{y_{i}} \]
+we can prove $\sum_{i=1}^{n} e_i = 0$ by proving 
+\[ \sum_{i=1}^{n} y_{i} =  \sum_{i=1}^{n}\hat{y_{i}} \]
+
+Since the normal equation is $X^TX\hat{\beta} = X^TY$ and $\hat{Y} = X\hat{\beta}$,
+$$ X^T\hat{Y} = X^TY$$
+Since design matrix X is 
+
+\[  
+\begin{bmatrix}
+1 & x_1\\
+1 & x_2\\
+.\\
+.\\
+1 & x_n\\
+\end{bmatrix}
+\]
+
+The first element of $X^T \hat{Y} = \begin{bmatrix} 1 & 1 & ... & 1 \\ \end{bmatrix} \hat{Y}$ is  $\sum_{i=1}^{n}\hat{y_{i}}$
+
+
+The first element of $X^TY = \begin{bmatrix} 1 & 1 & ... & 1 \\ \end{bmatrix} Y$ is  $\sum_{i=1}^{n}y_i$
+
+Therefore, $\sum_{i=1}^{n} y_{i} =  \sum_{i=1}^{n}\hat{y_{i}}$
+
+and the given statement is proved.
+
+```{r}
+# check by R
+a <- lm(mpg ~ disp, data = mtcars)
+#a$residuals
+#residuals(a)
+sum(residuals(a))
+
+```
+
+
+
+## 2.
+
+### (a)
+
+Since $X^TX$ is symmetric matrix,  it is 
+\[
+\begin{bmatrix}
+30 & 0 & 0 \\
+0 & 10 & 7 \\
+0 & 7 & 15 \\
+\end{bmatrix}
+\]
+
+n is equal to 30
+
+### (b)
+
+cor(X, Z) = $\frac{Cov(X,Z)}{SD(X) SD(Y)}$ = 
+
+$$\frac{\sum{(x_i\ -\ \bar{x})(z_i\ -\ \bar{z})}}     {\sqrt{\sum{(x_i\ -\ \bar{x})^2}\sum{(z_i\ -\ \bar{z})^2}}}$$. 
+
+and 
+
+\[
+X^TX = 
+  \begin{bmatrix}
+  30 & 0 & 0 \\
+  0 & 10 & 7 \\
+  0 & 7 & 15 \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  ...\ 1\ ... \\
+  ...\ x\ ... \\
+  ...\ z\ ... \\
+  \end{bmatrix}
+  \begin{bmatrix}
+  . & . & . \\
+  . & . & . \\
+  1 & x & z \\
+  . & . & . \\
+  . & . & . \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  \sum{1} & \sum{x_i} & \sum{z_i} \\
+  \sum{x_i} & \sum{x_i^2} & \sum{x_iz_i} \\
+  \sum{z_i} & \sum{x_iz_i} & \sum{z_i^2} \\
+  \end{bmatrix}
+\]
+
+Therefore, divide sum of x and z by n=30 leads
+
+$$\bar{x}\ =\ \frac{1}{30}\sum{x_i}\ =\ 0 \\ \bar{z}\ =\ \frac{1}{30}\sum{z_i}\ =\ 0$$. 
+
+So, cor(X, Z) = $$\frac{\sum{(x_i\ -\ \bar{x})(z_i\ -\ \bar{z})}}{\sqrt{\sum{(x_i\ -\ \bar{x})^2}\sum{(z_i\ -\ \bar{z})^2}}} = \frac{\sum{x_iz_i}}{\sqrt{\sum{x_i^2}\sum{z_i^2}}} = \frac{7}{\sqrt{10}\sqrt{15}}$$. 
+
+
+
+### (c)
+
+In ols equation, $\bar{y} = \bar{\hat{y}}$ so 
+
+ $$\bar{\hat{y}} = \bar{y} = \hat{\beta_0} + \hat{\beta_1}\bar{x} +\hat{\beta_2}\bar{z}$$ 
+ 
+ so  $\bar{y} = -2 + \bar{x} + 2\bar{z}$. And $\bar{x}$ = 0 and $\bar{z}$ = 0 are from $X^TX$. 
+
+Therefore, $\bar{y}$ = -2. 
+
+
+### (d)
+
+
+$$R^2 = \frac{SS_{reg}}{SS_{total}} = \frac{SS_{reg}}{SS_{reg} + RSS}$$  RSS = 12 
+ $$SS_{reg} = \sum{(\hat{y_i}\ -\ \bar{y})^2} = \sum{(-2\ +\ x_i\ +\ 2z_i\ +\ 2)^2} = \sum{(x_i\ +\ 2z_i)^2}$$
+ = $\sum{x_i^2} + 4\sum{x_iz_i} + 4\sum{z_i^2}$ = 10 + 28 + 60 = 98. So, $R^2 = \frac{SS_{reg}}{SS_{total}} = \frac{98}{12 +98} = \frac{98}{110} = \frac{49}{55}$.
+
+Thus, $R^2$ = $\frac{49}{55}$.
+
+
+
+## 3.
+
+### (a)
+```{r}
+
+set.seed(1)
+x <- rnorm(100, 0, 1)
+
+```
+
+
+### (b)
+
+```{r}
+eps <- rnorm(100, 0, 0.5) # rnorm(n, mean = 0, sd = 1)
+
+```
+
+### (c)
+
+```{r}
+y <- -1 + 0.5*x + eps
+
+```
+
+### (d)
+
+```{r}
+
+ggplot(data= as.data.frame(cbind(x,y)), aes(x = x, y= y)) + geom_point()
+
+
+```
+
+It roughly looks like a linear line. We can see that x and y has some linear relationship.
+
+### (e)
+
+```{r}
+
+lm <- lm(y ~ x)
+cat("the original beta0 : " , -1, "\n") 
+cat("beta0 hat : ",lm$coefficients[1],"\n")
+cat("the original beta1 : " , 0.5, "\n") 
+cat("beta1 hat : ",lm$coefficients[2],"\n")
+
+
+```
+
+The original coefficients and the estimated coefficients are fairly similar.
+
+
+### (f)
+
+
+```{r}
+plot(x, y, main = "Least square line on the scatter plot")
+abline(lm, col = "red")
+abline(-1, 0.5, col = "blue")
+legend("bottomright", legend = c("lm","Theoretical"),
+       lty=c(1,1), # gives the legend appropriate symbols (lines)
+       lwd=c(2.5,2.5),
+       col=c("blue","red")) 
+
+
+
+
+#ggplot(data= as.data.frame(cbind(x,y)), aes(x = x, y= y)) + geom_point()+   stat_smooth(method = "lm", col = "red") + theme(legend.position="top")
+
+```
+
+
+### (g)
+
+```{r}
+lm2 <- lm(y ~ x + I(x^2)) 
+#summary(lm(y ~ poly(x, 2, raw = T)))
+
+
+y2 <- lm2$coefficients[1] + lm2$coefficients[2]*x +
+  lm2$coefficients[3]*x^2
+
+
+ggplot(data= as.data.frame(cbind(x,y)), aes(x = x, y= y)) + geom_point()+stat_smooth(method = "lm", col = "red", formula = y~ x + I(x^2)) + theme(legend.position="top")
+
+
+
+plot(x, y, main = "Polynomial regression")
+smoothingSpline = smooth.spline(x, y2, spar = 0.5)
+lines(smoothingSpline, col = "red")
+
+
+summary(lm2)
+summary(lm)
+
+```
+
+It is not obvious if the quadratic term improves model fit or not. As we can see in summary of lm2 and lm, p-value gets bigger when we add quadratic terms, it suggests that it is probably not a good model to fit.
+
+
+
+### (h)
+
+```{r}
+
+#Part a
+set.seed(1)
+x2 <- rnorm(100, 0, 1)
+x2
+
+
+#Part b
+eps2 <- rnorm(100, 0, 0.1) #sd^2 = var
+eps2
+
+
+#Part c
+y2 <- -1 + 0.5*x2 + eps2
+y2
+
+
+
+#Part d
+
+ggplot(data= as.data.frame(cbind(x2,y2)), aes(x = x2, y= y2)) + geom_point()
+
+
+#Part e
+
+lm <- lm(y2 ~ x2)
+cat("the original beta0 : " , -1, "\n") 
+cat("beta0 hat : ",lm$coefficients[1],"\n")
+cat("the original beta1 : " , 0.5, "\n") 
+cat("beta1 hat : ",lm$coefficients[2],"\n")
+
+
+
+#Part f
+
+plot(x2, y2, main = "Least square line on the scatter plot")
+abline(lm, col = "red")
+abline(-1, 0.5, col = "blue")
+legend("bottomright", legend = c("lm","Theoretical"),
+       lty=c(1,1), # gives the legend appropriate symbols (lines)
+       lwd=c(2.5,2.5),
+       col=c("blue","red")) 
+
+
+
+```
+
+When there is less noise in the data, least square linear model fits well.
+
+
+### (i)
+
+```{r}
+
+#Part a
+set.seed(1)
+x2 <- rnorm(100, 0, 1)
+x2
+
+
+#Part b
+eps2 <- rnorm(100, 0, 2) #sd^2 = var
+eps2
+
+
+#Part c
+y2 <- -1 + 0.5*x2 + eps2
+y2
+
+
+
+#Part d
+
+ggplot(data= as.data.frame(cbind(x2,y2)), aes(x = x2, y= y2)) + geom_point()
+
+
+#Part e
+
+lm <- lm(y2 ~ x2)
+cat("the original beta0 : " , -1, "\n") 
+cat("beta0 hat : ",lm$coefficients[1],"\n")
+cat("the original beta1 : " , 0.5, "\n") 
+cat("beta1 hat : ",lm$coefficients[2],"\n")
+
+
+
+#Part f
+
+plot(x2, y2, main = "Least square line on the scatter plot")
+abline(lm, col = "red")
+abline(-1, 0.5, col = "blue")
+legend("bottomright", legend = c("lm","Theoretical"),
+       lty=c(1,1), # gives the legend appropriate symbols (lines)
+       lwd=c(2.5,2.5),
+       col=c("blue","red")) 
+
+
+
+
+```
+
+
+When there is more noise in the data, least square linear model doesn't fit well and it seems like an inefficient way to predict model.
+
+
+## 4
+
+
+
+```{r}
+ols_fit <- function(X, y){
+  coefficients <- solve(t(X) %*% X) %*% t(X) %*% y
+  y_values <- y
+  fitted_values <- X %*% coefficients
+  residuals <- y - fitted_values
+  n <- nrow(X)
+  q <- ncol(X)
+  returnvalue <- list(coefficients = coefficients, y_values = y_values, fitted_values = fitted_values, residuals = residuals, n = n, q = q)
+  return(returnvalue)
+}
+
+
+X <- as.matrix(cbind(1,mtcars[,c(3,4),drop = F]))
+y <- as.matrix(mtcars[,1, drop = F])
+
+
+fit <- ols_fit(X, y)
+names(fit)
+
+fit$coefficients
+summary(fit$fitted_values)
+summary(fit$residuals)    # Q : slightly off? 
+
+```
+
+
+## 5
+
+### (a)
+
+```{r}
+
+R2 <- function(fit){
+  r2 <- sum((fit$fitted_values - mean(fit$y_values))^2) /
+    sum((fit$y_values - mean(fit$y_values))^2)
+  return(r2)
+}
+
+R2(fit)
+
+```
+
+### (b)
+
+```{r}
+RSE <- function(fit){
+  rse <- sqrt(sum((fit$y_values - fit$fitted_values)^2) / (fit$n - fit$q))
+  return(rse)
+  
+}
+
+RSE(fit)
+
+```
+
+
+## 6
+
+```{r}
+prostate <- read.table("/Users/cloverjiyoon/2017Fall/Stat 154/data/prostate.txt")
+
+y <- as.matrix(prostate[,c("lpsa"), drop = F])
+X <- as.matrix(cbind(1, prostate[,c(1), drop = F]))  # lcavol as predictor
+
+fit <- ols_fit(X, y)
+r2 <- c(0)
+rse <- c(0)
+r2[1] <- R2(fit)
+rse[1] <- RSE(fit)
+
+for(i in 2:ncol(prostate)-1){
+  X <- as.matrix(cbind(1, prostate[,c(1:i), drop = F]))    # Q or c(1,i)?
+  fit <- ols_fit(X, y)
+  r2[i] <- R2(fit)
+  rse[i] <- RSE(fit)
+}
+
+ggplot(data = as.data.frame(cbind(r2,rse)), aes(x = rse, y = r2)) + geom_point()
+
+plot(r2, ylab = "R^2")
+r2
+plot(rse, ylab = "RSE")
+
+```
+
+
+
+## 7
+
+
+### (a)
+
+```{r}
+
+auto <- read.table("/Users/cloverjiyoon/2017Fall/Stat 154/data/Auto.data.txt", header = T, stringsAsFactors = F)
+
+
+auto$horsepower <- as.numeric(auto$horsepower)
+
+auto <- na.omit(auto)   # Q
+
+auto <- auto[,-9]
+
+pairs(auto)
+
+```
+
+
+### (b)
+
+```{r}
+
+cor <- cor(auto)
+cor
+
+
+```
+
+
+### (c)
+
+```{r}
+fit <- lm(mpg ~., data = auto)
+summary(fit)
+
+
+```
+
+**Is there a relationship between the predictors and the response?**
+
+The p-values of cylinders, horsepower, and acceleration variables are high and it means these variables are not significant to form a a good linear relationship with the response when (significance level) $\alpha$ = 0.01.
+
+$\\$
+
+**Which predictors appear to have a statistically significant relationship to the response?**
+
+By p-values, weight and year variables are the most significant predictors.
+
+$\\$
+
+**What does the coefficient for the year variable suggest?**
+
+When all the other variables are fixed, if year increase 1 unit(1 year), mpg will increase 0.75 unit.
+
+
+### (d)
+
+
+```{r}
+plot(fit)
+
+
+```
+
+
+There is a pattern in residuals vs fitted values plot. This suggests that the linear model we fitted violates the assumption for linear modeling (we assumed that $\hat{y}$ is independent with residuals). Also, the variance of residual seems to increase as fitted values increase. (heteroscedasitic) 
+
+There are some outliers, but they are not unusally large since the outliers are gradually increased as we can see in the plot.
+
+Leverage plot identifies observation with unusual high leverage on the right bottom side (14 on the dot). 
+
+
+
+
+### (e)
+
+ *   -  include both of main/single and interaction effects 
+ :   -  include only interaction effect. 
+
+```{r}
+
+
+# Q 
+fit <- lm(mpg ~.+ weight*year, data = auto)
+summary(fit)
+
+fit <- lm(mpg ~ weight:year, data = auto)
+summary(fit)
+
+```
+
+Since Interaction term's p value is close to 0, it suggests that there is an interaction effect and it is statistically significant.
+
+
+
+### (f)
+
+```{r}
+
+# log(X)
+newdata <- log(auto)
+fitnew <- lm(mpg ~., data = newdata)
+summary(fitnew)
+
+# sqrt(X)
+newdata <- sqrt(auto)
+fitnew <- lm(mpg ~., data = newdata)
+summary(fitnew)
+
+
+# X^2
+newdata <-as.data.frame(auto^2)
+fitnew <- lm(mpg ~., data = newdata)
+summary(fitnew)
+
+
+```
+
+
+I tranformed both X and Y data by using the given form.
+
+First transformation : Horsepower, weight, acceleration, and year are the significant variables
+
+Second transformation : Horsepower, weight, year, and origin are the significant variables
+
+Third transformation : Intercept, displacement, weight, acceleration, year, origin are the significant variables.
+
+Third transformation leads to have the most significant variables among all those given transformation.
+
+

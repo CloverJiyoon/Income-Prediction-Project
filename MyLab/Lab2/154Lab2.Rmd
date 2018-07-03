@@ -1,0 +1,208 @@
+---
+title: "Stat154_Lab2"
+author: "Jiyoon Clover Jeong"
+date: "9/8/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+
+head(USArrests)
+
+SVD <- svd(USArrests)
+
+
+U <- SVD$u
+d <- SVD$d
+D <- diag(d)
+V <- SVD$v
+
+head(U %*% D %*% t(V))
+head(USArrests)
+
+sum <-matrix(0,50,4)
+
+
+for(i in 1:4){
+  sum = sum + d[i] * (U[,i, drop = F] %*% t(V[,i, drop = F]))
+}
+
+
+head(sum)
+
+
+
+```
+
+
+```{r}
+
+sum <-matrix(0,50,4)
+
+
+for(i in 1:2){
+  sum = sum + d[i] * (U[,i, drop = F] %*% t(V[,i, drop = F]))
+}
+
+U <- as.data.frame(U)
+
+
+ggplot(U,aes(x =V1, y = V2)) + geom_point() + labs(x = "U1", y = "U2", title = "Plot of States (first 2 left singular vectors)") + geom_text(aes(label=rownames(USArrests)),hjust=0, vjust=0, size = 3)
+
+
+V <- as.data.frame(V)
+
+
+ggplot(V,aes(x =V1, y = V2)) + geom_point() + labs(x = "V1", y = "V2", title = "Plot of Variables (first 2 right singular vectors)") + geom_text(aes(label=colnames(USArrests)),hjust=0, vjust=0, size = 3)
+
+```
+
+
+```{r}
+
+R <- cor(USArrests)
+evd <- eigen(R, symmetric = T)
+
+eigenvalues <- eigen(R, symmetric = TRUE, only.values = TRUE)
+eigenvalues
+
+```
+
+
+```{r}
+
+X <- as.matrix(scale(USArrests, scale = FALSE))
+S <- t(X) %*% X
+S
+inverseS <- solve(S,diag(4))  # or solve(S)
+
+eigens <- eigen(S)
+
+anotherS <- eigens$vectors %*% diag(eigens$values) %*% t(eigens$vectors)
+
+anotherS
+  
+inverseS
+
+anotherinverseS <- eigens$vectors %*% solve(diag(eigens$values)) %*% t(eigens$vectors)
+
+anotherinverseS
+```
+
+
+
+
+```{r}
+
+
+A <- matrix(c(5,-4,3,-14,4,6,11,-4,-3), 3, 3)
+initial <- c(1,-1,0)
+
+power1 <- function(n, initial, A){
+  old <- initial
+  for(i in 1:n){
+    new <- A %*% old
+    
+    new <- new / new[which.max(abs(new))]
+    old <- new
+  }
+  
+  output <- list("eigenvector" = new,
+                 "eigenvalue" = (A %*% new)[which.max(abs(A %*% new))])
+  
+  # "eigenvalue" = (t(new) %*% t(A) %*% new) / lpnorm(new,2)
+  return(output)
+  
+}
+
+eigenoutput <- power1(55,initial,A)
+eigenoutput$eigenvector
+eigenoutput$eigenvalue
+eigen(A)
+
+
+lpnorm <- function(v,p) {
+  sum = 0
+  for(i in 1:length(v)){
+    sum = sum + abs(v[i])^p
+  }
+  return(sum^(1/p))
+}
+
+power2 <- function(n, initial, A){
+  old <- initial
+  for(i in 1:n){
+    new <- A %*% old
+    
+    new <- new / lpnorm(new,2)
+    old <- new
+  }
+  
+  output <- list("eigenvector" = new, "eigenvalue" = (t(new) %*% t(A) %*% new) / lpnorm(new,2))
+  
+  # "eigenvalue" = (t(new) %*% t(A) %*% new) / lpnorm(new,2)
+  # "eigenvalue" = t(new) %*% (A %*% new)
+  return(output)
+  
+}
+
+eigenoutput <- power2(55,initial,A)
+firsteigenvector<- eigenoutput$eigenvector
+firsteigenvector
+firsteigenvalue<-eigenoutput$eigenvalue
+firsteigenvalue
+eigen(A)
+
+```
+
+
+```{r}
+
+deflate <- A - firsteigenvalue[1] * (firsteigenvector) %*% t(firsteigenvector)
+eigenoutput <- power2(100,initial,deflate)
+secondeigenvector<- eigenoutput$eigenvector
+secondeigenvector
+secondeigenvalue<-eigenoutput$eigenvalue
+secondeigenvalue
+eigen(deflate)
+
+
+  
+```
+
+
+### 2 by 2 
+```{r}
+A <- matrix(c(2,1,-12,-5), 2, 2)
+initial <- c(1,1)
+
+eigenoutput <- power2(55,initial,A)
+firsteigenvector<- eigenoutput$eigenvector
+firsteigenvector
+firsteigenvalue<-eigenoutput$eigenvalue
+firsteigenvalue
+eigen(A)
+
+
+
+deflate <- A - firsteigenvalue[1] * (firsteigenvector) %*% t(firsteigenvector)
+eigenoutput <- power2(100,initial,deflate)
+secondeigenvector<- eigenoutput$eigenvector
+secondeigenvector
+secondeigenvalue<-eigenoutput$eigenvalue
+secondeigenvalue
+eigen(deflate)
+
+```
+
+
+
+

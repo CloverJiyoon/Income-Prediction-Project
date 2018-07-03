@@ -1,0 +1,229 @@
+---
+title: "Stat151ALab1"
+author: "Jiyoon Clover Jeong"
+date: "8/28/2017"
+output:
+  pdf_document: default
+  html_document: default
+header-includes: \usepackage{CJKutf8}
+---
+
+
+
+
+\begin{CJK}{UTF8}{mj}
+
+한국어 사용하기 
+
+\end{CJK}
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+```
+
+```{r}
+x <- 1:9
+matrix(x,3,3)
+matrix(x,3,3,byrow=TRUE)
+diag(1,5,5)
+a1 <- c(2, 3, 6, 7, 10)
+a2 <- c(1.88, 2.05, 1.70, 1.60, 1.78)
+a3 <- c(80, 90, 70, 50, 75)
+
+a = matrix(data=c(a1,a2,a3),5,3)
+b1 <- c(1, 4, 5, 8, 9)
+b2 <- c(1.22, 1.05, 3.60, 0.40, 2.54)
+b3 <- c(20, 40, 30, 80, 100)
+b =matrix(data=c(b1,b2,b3), 3,5, byrow = TRUE)
+
+
+a %*% b
+b %*% a
+t(a) %*% t(b)
+t(b) %*% t(a)
+
+```
+
+
+
+```{r}
+
+head(iris)
+c = iris[1] + iris[2] *2 + iris[3] * 3 + iris[4] *4
+cc = as.matrix(iris[,-5]) %*%  matrix(1:4,4,1)
+
+
+# test vnorm() with 1:5
+v <- 1:5
+
+vnorm <- function(x) {
+  a = t(x) %*% x
+  return(a^(1/2))
+  
+}
+
+size = vnorm(v)
+
+u = v / size
+
+
+is_square <- function(x) {
+  x = as.matrix(x)
+  if(nrow(x) == ncol(x))
+    return(TRUE)
+  else
+    return(FALSE)
+  
+}
+
+is_square(u)
+
+mtrace <- function(x) {
+  if(is_square(x) == FALSE) {
+    cat("Matrix is not square")
+    return(FALSE)
+  }
+  else{
+    return(sum(diag(x)))
+  }
+}
+
+A = matrix(1:9,3,3)
+B = matrix(2:10,3,3)
+mtrace(A)
+
+identical(mtrace(A+B),mtrace(A) + mtrace(B))
+identical(mtrace(5*A),5*mtrace(A))
+
+
+```
+
+
+$\\$
+
+
+$tr(A + B)\ = \sum_{i=1}^{p} (a+b)_{ii} = \sum_{i=1}^{p}(a_{ii} +b_{ii}) = \sum_{i=1}^{p}(a_{ii}) + \sum_{i=1}^{p}(b_{ii}) = tr(A) + tr(B) \\$
+
+$\\tr(cA) = \sum_{i=1}^{p} (ca)_{ii} = c\sum_{i=1}^{p} (a)_{ii} = c*tr(A)\\$
+
+$since\ the\ diagonal\ entries\ in\ square\ matrix\ doesn't\ change\ when\ we\ transpose\ square\ matrix,\ we\ will\ prove\ tr(AB) == tr(BA)\\$
+
+since matrix, we will prove $tr(AB) == tr(BA)\$\ $
+
+
+
+
+```{r}
+
+t1 = mtrace(crossprod(A,B))
+t2 = mtrace(tcrossprod(A,B))
+t3 = mtrace(crossprod(B,A))
+t4 = mtrace(tcrossprod(B,A))
+
+sapply(c(t1, t2, t3, t4), identical, t1)
+
+
+head(mtcars)
+M <- mtcars[, c(1,3,4,5,6)]
+head(M)
+apply(M, 2, mean)
+
+Mc <- scale(M, scale = FALSE)
+
+
+#Confirm that variables in Mc are mean-centered by calculating the vector of #column-means    <---??
+colMeans(Mc)
+
+sweeped <- sweep(M, 2, colMeans(M))
+
+head(sweeped)
+head(Mc)
+
+#if you want to add 1 to the 1st row, 2 to the 2nd, etc... of the matrix you #defined, you will do:
+#sweep (M, 1, c (1: 4), "+")
+
+apply(M,2, max)
+
+sweep(M,2, apply(M,2,max),"/")
+
+zerotoone = apply(M, 2, FUN = function(X) (X - min(X))/diff(range(X)))
+head(zerotoone)
+
+
+D <- as.matrix(sweep(M, 2, colMeans(M)))  
+# substract column mean from each cell
+n = ncol(D)
+covmatrix <- (n-1)^(-1) * (t(D) %*% D)
+head(covmatrix)
+head(cov(M))
+
+# http://www.itl.nist.gov/div898/handbook/pmc/section5/pmc541.htm
+
+STD <- diag(diag(covmatrix)^(-1/2))   
+
+
+#constructs the correlation matrix
+cormatrix <- STD %*% covmatrix %*% STD
+head(cormatrix)
+head(cor(M))
+
+
+```
+
+```{r}
+
+cyl <- factor(mtcars$cyl)
+# all categories
+
+
+# a = model.matrix(~0 + cyl, M) 
+# a <- c(1,2,3,1,4,7,9,1)
+# sapply(c("1","3"), function(x) as.integer(x == a))
+# sapply(c(1,2,3,4,5,6), function(x) {as.integer(x == a)})
+
+
+
+
+dummify <- function(x, all) {
+  n = length(x)    # number of rows
+  a = matrix(0, n, nlevels(x))
+  colnames(a) <- levels(x)
+  for(i in 1:n){
+    a[i, as.character(x[i])] = 1
+  }
+  if(all==T)
+    return(a)
+  else
+    return(a[,-nlevels(x)])
+  
+}
+
+
+CYL1 <- dummify(cyl, all = TRUE)
+head(CYL1)
+
+# minus one category
+CYL2 <- dummify(cyl, all = FALSE)
+head(CYL2)
+
+
+gear <- factor(mtcars$gear)
+
+crosstable <- function(first, second) {
+  a = dummify(first, T)
+  b = dummify(second, T)
+  return (t(a) %*% b)
+}
+
+xtb <- crosstable(cyl, gear)
+head(xtb)
+
+
+
+
+
+```
+
+
+
+

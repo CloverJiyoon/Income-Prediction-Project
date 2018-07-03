@@ -1,0 +1,510 @@
+---
+title: "Jin Kweon_3032235207_HW4"
+author: "Jin Kweon"
+date: "10/9/2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ElemStatLearn)
+library(dplyr)
+library(leaps)
+library(pls)
+library(glmnet, warn.conflicts = T)
+library(caret)
+```
+
+#Problem 1 (10 points)
+
+It is given in the problem that $r_{12}$ = $r_{13}$ = $r_{23}$ = 0. So, for one example, $r_{12}$ = $cor(X_1, X_2)$ = $\frac{cov(X_1,X_2)}{sd(X_1)sd(X_2)}$ = 0. Since denominator cannot be zero (also, the problem never says standard deviation or variance of four predictors are zero), it implies that $cov(X_1,X_2)$ = 0. 
+
+So, $r_{13}$ and $r_{23}$ also imply $cov(X_1,X_3)$ = 0 and $cov(X_2,X_3)$ = 0. 
+
+So, now, I need to prove $r_{14}$ = $r_{24}$ = $r_{34}$ = 0.577. (or, closed to 0.577) I will start with proving $r_{14}$ = 0.577.
+
+$\\$
+
+$r_{14}$ = $\frac{cov(X_1,X_4)}{sd(X_1)sd(X_4)}$ = $\frac{cov(X_1,X_1+X_2+X_3)}{sd(X_1)\sqrt{var(X_4)}}$ = $\frac{cov(X_1,X_1)\ +\ cov(X_1,X_2)\ +\ cov(X_1,X_3)}{sd(X_1)\sqrt{var(X_1\ +\ X_2\ +\ X_3)}}$ = $\frac{cov(X_1,X_1)}{sd(X_1)\sqrt{var(X_1\ +\ X_2\ +\ X_3)}}$ = $\frac{var(X_1)}{sd(X_1)\sqrt{var(X_1)\ +\ var(X_2)\ +\ var(X_3)\ +\ 2cov(X_1,X_2)\ +\ 2cov(X_1,X_3)\ +\ 2cov(X_2,X_3)}}$ = $\frac{var(X_1)}{sd(X_1)\sqrt{var(X_1)\ +\ var(X_2)\ +\ var(X_3)}}$ = $\frac{sd(X_1)}{\sqrt{var(X_1)\ +\ var(X_2)\ +\ var(X_3)}}$ = $\frac{\sigma_1}{\sqrt{\sigma_1^2\ +\ \sigma_2^2\ +\ \sigma_3^2}}$ = $\frac{\sigma_1}{\sqrt{3 \sigma_1^2}}$ = $\frac{1}{\sqrt{3}}\ \approx\ 0.577$. 
+
+$\\$
+
+Also, $r_{24}$ and $r_{34}$ can be proved in a similar way. 
+
+$r_{24}$ = $\frac{cov(X_2,X_4)}{sd(X_2)sd(X_4)}$ = $\frac{cov(X_2,X_1+X_2+X_3)}{sd(X_2)\sqrt{var(X_4)}}$ = $\frac{var(X_2)}{sd(X_2)\sqrt{var(X_1)\ +\ var(X_2)\ +\ var(X_3)}}$ = $\frac{sd(X_2)}{\sqrt{var(X_1)\ +\ var(X_2)\ +\ var(X_3)}}$ = $\frac{\sigma_2}{\sqrt{3 \sigma_2^2}}$ = $\frac{1}{\sqrt{3}}\ \approx\ 0.577$.
+
+And, $r_{34}$ will be eventually $\frac{\sigma_3}{\sqrt{3 \sigma_3^2}}$ = $\frac{1}{\sqrt{3}}\ \approx\ 0.577$. 
+
+$\\$
+
+The key point of this problem is that variance of $X_1$, $X_2$, and $X_3$ are the same. 
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+#Problem 2 (10 points)
+
+As it says on the hint of the problem, it can definitely be proved by recursivity of PLS algorithm we learned in the class. 
+
+Here is the proof below:
+
+I am going to pick i where 1 $\leq$ i $\leq$ n. And, what I need to do is prove i is orthogonal to any other PLS component. 
+
+1) $z_i^Tz_{i+1}$ = $z_i^T(\frac{X_iw_{i+1}}{w_{i+1}^Tw_{i+1}})$ = $\frac{1}{w_{i+1}^Tw_{i+1}}z_i^T(X_iw_{i+1})$. I only need to prove $z_i^T(X_iw_{i+1})$ = 0. 
+
+And, $z_i^T(X_iw_{i+1})$ = $z_i^T([x_{i-1}\ -\ z_ip_i^T]w_{i+1})$ = $z_i^T([x_{i-1}\ -\ z_i[\frac{x_{i-1}^Tz_i}{z_i^Tz_i}]^T]w_{i+1})$ = $(z_i^Tx_{i-1}\ -\ z_i^Tx_{i-1})w_{i+1}$ = 0.
+
+$\\$
+
+2) After, I will prove it recursively. 
+
+$z_i^Tz_{i+2}$ = $z_i^T(X_{i+1}w_{i+2})\frac{1}{w_{i+2}^Tw_{i+2}}$ = $z_i^T(X_i\ -\ z_{i+1}p_{i+1}^T)\frac{w_{i+2}}{w_{i+2}^Tw_{i+2}}$ = $(z_i^TX_i\ -\ z_i^Tz_{i+1}p_{i+1}^T)\frac{w_{i+2}}{w_{i+2}^Tw_{i+2}}$. 
+
+And, since $z_i^Tz_{i+1}$ = 0 as we proved in the last recursion proof, $(z_i^TX_i\ -\ z_i^Tz_{i+1}p_{i+1}^T)\frac{w_{i+2}}{w_{i+2}^Tw_{i+2}}$ = $z_i^TX_i\frac{w_{i+2}}{w_{i+2}^Tw_{i+2}}$.
+
+So, I only need to prove $z_i^TX_i$ = 0. 
+
+$z_i^TX_i$ = $z_i^T(X_{i-1}\ -\ z_ip_i^T)$ = $z_i^T(X_{i-1}\ -\ z_i[\frac{x_{i-1}^Tz_i}{z_i^Tz_i}]^T)$ = $z_i^TX_{i-1}\ -\ z_i^TX_{i-1}$ = 0.
+
+So, $z_i^Tz_{i+2}$ = 0 is proved. 
+
+$\\$
+
+3) I will prove one more recursion. 
+
+$z_i^Tz_{i+3}$ = $z_i^T(X_{i+2}w_{i+3})\frac{1}{w_{i+3}^Tw_{i+3}}$ = $z_i^T(X_{i+1}\ -\ z_{i+2}p_{i+2}^T)w_{i+3}\frac{1}{w_{i+3}^Tw_{i+3}}$.
+
+I need to prove $z_i^T(X_{i+1}\ -\ z_{i+2}p_{i+2}^T)$ = $z_i^T(X_{i+1}\ -\ z_{i+2}[\frac{x_{i+1}^Tz_{i+2}}{z_{i+2}^Tz_{i+2}}]^T)$ = $z_i^TX_{i+1}\ -\ z_i^Tz_{i+2}[\frac{x_{i+1}^Tz_{i+2}}{z_{i+2}^Tz_{i+2}}]^T$.
+
+And, since we proved $z_i^Tz_{i+2}$ = 0, $z_i^TX_{i+1}\ -\ z_i^Tz_{i+2}[\frac{x_{i+1}^Tz_{i+2}}{z_{i+2}^Tz_{i+2}}]^T$ = $z_i^TX_{i+1}$.
+
+So, I need to prove $z_i^TX_{i+1}$ = 0.
+
+$z_i^TX_{i+1}$ = $(z_i^TX_i\ -\ z_i^Tz_{i+1}p_{i+1}^T)$ = $z_i^TX_i$, as $z_i^Tz_{i+1}$ = 0.
+
+So, I need to prove $z_i^TX_i$ = 0.
+
+$z_i^TX_i$ = $z_i^T(X_{i-1}\ -\ z_ip_i^T)$ = $z_i^T(X_{i-1}\ -\ z_i[\frac{x_{i-1}^Tz_i}{z_i^Tz_i}]^T)$ = $z_i^TX_{i-1}\ -\ z_i^TX_{i-1}$ = 0.
+
+I can keep proving this recursion. 
+
+$\\$
+
+Thus, $z_h^Tz_l$ = 0, for h $\neq$ l where 1 $\leq$ h $\leq$ n and 1 $\leq$ l $\leq$ n.
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+
+#Problem 3 (100 points)
+
+• lcavol: log cancer volume
+
+• lweight: log prostate weight
+
+• age: age of patient
+
+• lbph: log of the amount of benign prostatic hyperplasia
+
+• svi: seminal vesicle invasion
+
+• lcp: log of capsular penetration
+
+• gleason: Gleason score
+
+• pgg45: percent of Gleason scores 4 or 5
+
+• lpsa: log of prostate-specific antigen (response variable)
+
+```{r import}
+prostate <- prostate
+```
+
+```{r models_pg3}
+training <- prostate %>% filter(train == "TRUE")
+testing <- prostate %>% filter(train == "FALSE")
+training <- training[,-10]
+testing <- testing[,-10]
+  
+dim(training)
+dim(testing)
+sum(is.na(prostate)) #check NA
+```
+
+$\\$
+
+$\\$
+
+$\\$
+
+lpsa is the response variable.
+The rest are the predictors. 
+I will select training set and standardize training set only! After, I will get correlation matrix. 
+
+###Correlations of predictors, and some preprocessing (10 pts)
+```{r correlation_pg4}
+trainingscale <- scale(training, T, T)
+
+summary(trainingscale[,1:3]) #summary for lcavol, lweight, and age 
+summary(trainingscale[,4:6]) #summary for lbph, svi, lcp
+summary(trainingscale[,7:8]) #summary for gleason and pgg45
+
+trainingscale_x <- trainingscale[,-9]
+
+correlation <- cor(trainingscale_x)
+correlation <- correlation[-1,-8]
+round(correlation, 3)
+```
+
+
+$\\$
+
+$\\$
+
+$\\$
+
+###Least Squares Model (10 pts)
+```{r leastsquare_pg5}
+#response is not scaled, but predictors are. 
+trainxscale_only <- cbind(trainingscale_x, lpsa = training$lpsa) 
+
+ols <- lm(lpsa ~., data = as.data.frame(trainxscale_only))
+
+table3.2 <- summary(ols)$coefficients[,-4]
+colnames(table3.2) <- c("Coefficient", "Std.Error", "T value")
+
+round(table3.2, 2)
+```
+
+*Comment:*
+
+I agree with the points professor Sanchez made on the instruction. The first three coefficients (also, maybe the last one: pgg45) are slightly off.
+
+And, actually, it should be t-test, not z-score, since we do not know actual standard deviation. 
+
+We can actually scale response variable as well. 
+
+**<Interpretation>**
+1. When we did not scale response variable: When x variable goes up 1 unit, reponse variable changes coefficient of x (in y).
+
+2. when we scale reponse variable: When x variable goes up 1 unit, response variable changes coefficient of x unit/quantile (in y).
+
+$\\$
+
+$\\$
+
+$\\$
+
+###Best Subset Regression (10 pts)
+
+Good reference: http://rstudio-pubs-static.s3.amazonaws.com/2897_9220b21cfc0c43a396ff9abf122bb351.html 
+```{r subset_pg5}
+subset <- regsubsets(lpsa ~., data = as.data.frame(trainxscale_only), nvmax = 8)
+summary(subset)
+
+summary(subset)$bic
+paste("So, I keep the", which.min(summary(subset)$bic), "variables.")
+
+par(mfrow = c(1,2))
+plot(subset, scale = "r2")
+plot(subset, scale = "adjr2")
+plot(subset, scale = "Cp")
+plot(subset, scale = "bic")
+
+subsetcoef <- lm(lpsa ~ lcavol + lweight, data = as.data.frame(trainxscale_only))$coefficients
+# coef(subset, 2) - other way to get coefficients
+```
+
+*Comment:*
+
+Using BIC, they tell me I should keep the best two variables. So, I output the minimum BIC for when each number of variables are kept. Actually, there are two steps. 
+
+First, since we have 8 variables, we need to find the minimum BIC when 1, 2, ..., 8 variables are kept. So, I got -43.26 (miminimum BIC when 1 variable is kept), -51.30 (minimum BIC when 2 variables are kept), ..., -41.58 (minimum BIC when 8 variables are kept). After that, I need to find how many variables to keep, by finding the mimimum from there. And, it is the second one. 
+
+$\\$
+
+Thus, the *BEST* two three variable model contains lcavol and lweight.
+
+$\\$
+
+$\\$
+
+$\\$
+
+###PCR and PLSR (40 pts)
+Q. What is X in summary(plsrfunc)? Is it kind of each cumulative of eigenvalue / 8?
+===> this is the cumulative variance of components!!! not the e-value!!!
+
+Q. Why do I have 8 variables for coef() function for plsr even though my tuning parameter is 6?
+===> So, y = zd = xbeta, and although you have 6 compoents beta still have 8 coefficients. d (coefficient of components) will have 6 coefficients, but beta (coefficient of design matrix - what we want!! and what we usually say coefficient!!) still have 8 coefficients.
+
+*So, lasso is the only one that sometimes has zero coefficient for design matrix!!*
+
+Q. What does coefplot() do compared to matplot?
+==> coefplot shows the coefficient (d) plot for components, and matplot draws the coefficient (beta) plot for design matrix!!!
+
+Use 10 fold cross validation. 
+```{r pcr_plsr_pg5}
+set.seed(10)
+
+#PLSR
+plsrfunc <- plsr(formula = lpsa ~., data =as.data.frame(trainxscale_only), validation = "CV") #validation
+summary(plsrfunc)
+
+paste("Tuning parameter is", which.min(plsrfunc$validation$PRESS[1,]))
+
+print("Associated coefficients of PLSR:")
+plsrfunc$coefficients[,,which.min(plsrfunc$validation$PRESS)] 
+
+plscoef <- apply(plsrfunc$coefficients, 3, function(x) x)
+par(mfrow= c(1,2))
+coefplot(plsrfunc, comps = 1:8, separate = F, intercept = T, xlab = "Number of Components",
+         main = "Componen Coefficients", legendpos = "topright")
+
+matplot(t(plscoef), type= 's', lwd = 2, xlab = "Number of Components", main = "Profile of Coefficients", ylab = "Coefficient")
+legend("topleft", colnames(plscoef), col = seq_len(ncol(plscoef)), cex = 0.5, fill = seq_len(ncol(plscoef)))
+
+
+#matplot(plscoef, type= 'l', lwd = 2)
+#matplot(t(plscoef), type= 'l', lwd = 2)
+
+
+#RMSEP(plsrfunc) #This is what we have from summary
+MSEP(plsrfunc) #Output MSE
+
+par(mfrow = c(1,1))
+validationplot(plsrfunc, val.type = "MSEP", ncomp = 1:8, type = "b",
+               legendpos = "topright", xlab = "Number of Components",
+               ylab = "Cross-Validation MSE", main = "CV-MSE")
+
+# plot(plsrfunc$validation$PRESS[1, ] / nrow(trainxscale_only), type="l", main="PLSR",
+#      xlab="Number of Components", ylab="CV MSE")
+
+
+coef(plsrfunc, intercept = T)
+
+
+
+
+
+#PCR
+pcrfunc <- pcr(formula = lpsa ~., data = as.data.frame(trainxscale_only), validation = "CV") #validation
+summary(pcrfunc)
+
+paste("Tuning parameter is", which.min(pcrfunc$validation$PRESS[1,]))
+
+print("Associated coefficients of PCR:")
+pcrfunc$coefficients[,,which.min(pcrfunc$validation$PRESS)] 
+
+par(mfrow= c(1,2))
+pcrcoef <- apply(pcrfunc$coefficients, 3, function(x) x)
+coefplot(pcrfunc, comps = 1:8, separate = F, xlab = "Number of Components",
+         main = "Componen Coefficients", legendpos = "topright")
+
+matplot(t(pcrcoef), type= 's', lwd = 2, xlab = "Number of Components",
+         main = "Profile of Coefficients", ylab = "Coefficient")
+legend("topleft", colnames(pcrcoef), col = seq_len(ncol(pcrcoef)), cex = 0.6, fill = seq_len(ncol(pcrcoef)))
+
+#matplot(pcrcoef, type= 'l', lwd = 2)
+#matplot(t(pcrcoef), type= 'l', lwd = 2)
+
+#RMSEP(pcrfunc) #This is what we have from summary
+MSEP(pcrfunc) #Output MSE
+
+par(mfrow = c(1,1))
+validationplot(pcrfunc, val.type = "MSEP", ncomp = 1:8, type = "b",
+               legendpos = "topright", xlab = "Number of Components",
+               ylab = "Cross-Validation MSE", main = "CV-MSE")
+
+# plot(pcrfunc$validation$PRESS[1, ] / nrow(trainxscale_only), type="l", main="PCR",
+#      xlab="Number of Components", ylab="CV MSE")
+
+coef(pcrfunc, intercept = T)
+```
+
+*Comment:*
+
+Tuning parameter/Number of components are *6* and *8 (using all variables)* for PLSR and PCR respectively, since this has the smallest CV-RMSE (root square of MSE of prediction, which corresponds to the smallest MSE as well). I got these results based on 10-fold CV. They do 10-fold CV for each number of components, and we compare MSE of each number of component's.  
+
+Just for knowledge, plsr and pcr will have the same coefficients if we are using full coefficients (same with the OLS as well -> thus same MSE for all these three). 
+
+
+
+$\\$
+
+$\\$
+
+$\\$
+
+Q. Am I supposed to include intercept for my design matrix for ridge and lasso before using glmnet function? So, plsr and pcr are the only functions that do not include intercepts?
+
+
+###RR and Lasso (40 pts)
+```{r}
+set.seed(10)
+#Lasso
+lasso <- cv.glmnet(trainxscale_only[,1:8], trainxscale_only[,9], nfolds = 10, alpha = 1) #validation
+
+paste("Tuning parameter is", round(lasso$lambda.min, 4))
+
+plot.cv.glmnet(lasso)
+
+#Refit a model
+lasso2 <- glmnet(trainxscale_only[,1:8], trainxscale_only[,9], alpha = 1,
+                 lambda = lasso$lambda)
+plot.glmnet(lasso2)
+
+
+refit1 <- glmnet(trainxscale_only[,1:8], trainxscale_only[,9], alpha = 1, lambda = lasso$lambda.min)
+refit1
+coef(lasso, s = "lambda.min") #If i did not specify s, they give one standard away.
+coef(refit1, s = "lambda.min")
+
+
+
+
+
+
+#Ridge 
+ridge <- cv.glmnet(trainxscale_only[,1:8], trainxscale_only[,9], nfolds = 10, alpha = 0) #validation
+
+paste("Tuning paremeter is", round(ridge$lambda.min, 4))
+
+plot.cv.glmnet(ridge)
+
+#Refit a model
+ridge2 <- glmnet(trainxscale_only[,1:8], trainxscale_only[,9], alpha = 0,
+                 lambda = ridge$lambda)
+plot.glmnet(ridge2)
+
+refit2 <- glmnet(trainxscale_only[,1:8], trainxscale_only[,9], alpha = 0, lambda = ridge$lambda.min)
+refit2
+coef(ridge, s = "lambda.min")
+coef(refit2, s = "lambda.min")
+```
+
+$\\$
+
+$\\$
+
+$\\$
+
+Q. How to print out the coefficient with tuning for PCR and PLS with intercept?... using these  coef(plsrfunc, intercept = T) and plsrfunc$coefficients[,,which.min(plsrfunc$validation$PRESS)], does not give me.... 
+===> plsrfunc$coefficients[,,which.min(plsrfunc$validation$PRESS)] and append the intercept like this: coef(plsrfunc, intercept = T)[1]. ===> c(intercept = coef(plsrfunc, intercept = T)[1], plsrfunc$coefficients[,,which.min(plsrfunc$validation$PRESS)])
+
+Q. When I test MSE here, since training and testing are given, and also we already conducted 10-fold CV for tuning parameter, so we do not need to any CV. And, we can just use predict to get answers?
+===> Right!!!
+
+
+###Model Selection (20 pts)
+
+```{r}
+subsetcoeffill <- matrix(0, 9, 1)
+subsetcoeffill <- unname(rbind(as.matrix(subsetcoef), NA, NA, NA, NA, NA, NA)) #Fill NA for empty
+  
+Lasso <- coef(lasso, s = "lambda.min")[,1]
+Lasso[c(8)] <- NA
+Lasso <- unname(Lasso)
+
+
+models <- data.frame(
+      LS = as.vector(table3.2[,1]), "Best Subset" = subsetcoeffill,
+      Ridge = as.vector(coef(ridge, s = "lambda.min")),
+      Lasso = Lasso,
+      #include an intercept with the minimum coefficients. 
+      PCR = unname(c(intercept = coef(pcrfunc, intercept = T)[1],
+                     pcrfunc$coefficients[,,which.min(pcrfunc$validation$PRESS)])),
+      PLS = unname(c(intercept = coef(plsrfunc, intercept = T)[1],
+                     plsrfunc$coefficients[,,which.min(plsrfunc$validation$PRESS)]))
+      )
+
+#We scale x training and xtesting!!!     
+msefunc <- function(msefolder){
+  x <- model.matrix(lm(lpsa ~.-1, data = as.data.frame(scale(training))))
+  xint <- model.matrix(lm(lpsa ~., data = as.data.frame(scale(training))))
+  
+  ytest <- testing$lpsa
+  xtest <- model.matrix(lm(lpsa ~., data = as.data.frame(scale(testing))))
+    
+  ytrain <- scale(training$lpsa)
+  xtrain <- scale(xint)
+    
+  #OLS
+  olsbeta <- table3.2[,1]
+  mse[1] <- sum((ytest - (xtest %*% olsbeta))^2) / length(ytest)
+  
+  
+  #Best Subset
+  yhat <- xtest[,1:3] %*% subsetcoef
+  #Have NA so calculate separately.
+  mse[2] <- sum((ytest - yhat)^2) / length(ytest)
+  
+  #Ridge
+  yhat <- predict(ridge, xtest[,-1], s = "lambda.min")
+  mse[3] <- mean((ytest - yhat)^2)
+
+  
+  #Lasso
+  yhat <- predict(lasso, xtest[,-1], s = "lambda.min")
+  mse[4] <- mean((ytest - yhat)^2)
+  
+    
+  #PCR
+  yhat <- predict(pcrfunc, xtest[,-1], ncomp = unname(which.min(pcrfunc$validation$PRESS[1, ])))
+  mse[5] <- mean((ytest - yhat)^2)
+  
+  
+  #PLSR
+  yhat <- predict(plsrfunc, xtest[,-1], ncomp = unname(which.min(plsrfunc$validation$PRESS[1, ])))
+  mse[6] <- mean((ytest - yhat)^2)
+  
+  return(mse)
+}      
+
+mse <- c()
+mse <- msefunc(mse)
+
+print("Here is the mse for 6 models:")
+mse
+plot(mse)
+
+models <- rbind(models, mse)
+rownames(models) <- c("Intercept", "lcavol", "lweight",
+                      "age", "lbph", "svi", "lcp", "gleason",
+                      "pgg45", "Test Error")
+models
+```
+
+*Comment:*
+
+From the table I got, ridge (or best subset) is the best model, as it has the smallest MSE. They changed based on set.seed(). 
+
+
+
+
+
+
+
+
+
+

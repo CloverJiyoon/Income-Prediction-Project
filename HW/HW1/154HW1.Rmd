@@ -1,0 +1,408 @@
+---
+title: "154HW1_Jiyoon_Jeong_Lab2"
+author: "Jiyoon Clover Jeong"
+date: "9/10/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Problem 1
+
+```{r}
+
+A <- matrix(c(1,4,2,0,-3,1),2,3)
+B <- matrix(c(2,-1,3,2,4,0),2,3)
+C <- matrix(c(0,4,1,-1,0,-2),2,3)
+
+A + B
+(A + C) + B
+A -(C + B)
+-(A + B)
+(A - B) + C
+
+```
+
+
+## Problem 2
+
+```{r}
+
+X <- matrix(c(2, 1, 0, 9, 4, 2, 3, 8, 3, 5, 2, 4, 7, 3, 4, 5, 8, 7, 7, 2, 9, 8, 7, 1), 6, 4, byrow = T)
+
+rownames(X) <- c(letters[1:6])
+colnames(X) <- c("Y","X1","X2","X3")
+X
+
+
+```
+
+
+### (a)
+```{r}
+
+X[1,1] + X[2,1] + X[3,1] + X[4,1] + X[5,1] + X[6,1]
+
+X[,1] %*% matrix(1, 6, 1)
+
+
+```
+
+
+### (b)
+
+```{r}
+
+
+(X[1,2] + X[2,2] + X[3,2] + X[4,2] + X[5,2] + X[6,2]) /6
+
+(X[,2] %*% matrix(1, 6, 1)) /6
+
+
+```
+
+
+### (c)
+
+```{r}
+
+t(X[,1, drop =F]) %*% X[,3, drop = F]
+
+```
+
+
+### (d)
+
+
+```{r}
+
+(t(X[,4, drop = F]) %*% X[,4, drop = F] ) - (t(X[,4, drop = F]) %*% matrix(1,6,1))^(2)/6
+
+```
+
+
+### (e)
+
+```{r}
+
+meany <- (X[,1] %*% matrix(1, 6, 1)) /6
+meanx1 <- (X[,2] %*% matrix(1, 6, 1)) /6
+meanx2 <- (X[,3] %*% matrix(1, 6, 1)) /6
+meanx3 <- (X[,4] %*% matrix(1, 6, 1)) /6
+
+cbind((X[,1,drop =F] - meany[1]), (X[,2,drop =F] - meanx1[1]),
+           (X[,3,drop =F] - meanx2[1]), (X[,4,drop =F] - meanx3[1]))
+X
+
+# check with : apply(X,2, FUN = function(x) {x - mean(x)})
+```
+
+### (f)
+
+```{r}
+p <- ncol(X) #number of variables
+n <- nrow(X) #number of objects
+ 
+#create means for each column
+meanmat <- matrix(data=1, nrow=n) %*% cbind(meany[1],meanx1[1],meanx2[1],meanx3[1]) 
+ 
+#creates a difference matrix
+D <- X - meanmat
+ 
+#creates the covariance matrix
+Cov <- (n-1)^(-1) * (t(D) %*% D)
+Cov
+
+# check with cov(X)
+cov(X)
+
+```
+
+## problem 3
+
+### (a)
+
+```{r}
+
+a <- abs(0.5)
+b <- abs(4)
+
+a * b * cos(45*pi/180)
+
+
+
+```
+
+### (b)
+
+```{r}
+
+a <- abs(4)
+b <- abs(1)
+
+a * b * cos(90*pi/180)
+
+```
+
+### (c)
+
+```{r}
+
+a <- abs(1)
+b <- abs(1)
+
+a * b * cos(120*pi/180)
+
+```
+
+
+## problem 4
+
+```{r}
+
+u = c(1, 3, 5)
+v = c(2, 4, 6)
+
+# v onto u
+proj <- function(v,u){
+  
+  c <- (t(u) %*% v) / (t(u) %*% u)
+  return(c*u)
+  
+}
+proj(u,v)
+
+```
+
+
+## problem 5
+### (a)
+
+```{r}
+x = c(1, 2, 3)
+y = c(3, 0, 2)
+z = c(3, 1, 1)
+
+norm <- function(x){
+  return(sum(x^2)^(1/2))
+}
+
+u1 <- x
+e1 <- u1/ norm(u1)
+cat("u1 : ", u1, "\n")
+cat("e1 : ", e1, "\n")
+
+u2 <- y - proj(y,u1)
+e2 <- u2 / norm(u2)
+cat("u2 : ", u2, "\n")
+cat("e2 : ", e2, "\n")
+
+u3 <- z - proj(z,u1) - proj(z,u2)
+e3 <- u3 / norm(u3)
+cat("u3 : ", u3, "\n")
+cat("e3 : ", e3, "\n")
+
+
+
+```
+
+
+### (b)
+
+```{r}
+
+x = c(2, 1)
+y = c(1, 2)
+z = c(1, 1)
+
+u1 <- x
+e1 <- u1/ norm(u1)
+cat("u1 : ", u1, "\n")
+cat("e1 : ", e1, "\n")
+
+u2 <- y - proj(y,u1)
+e2 <- u2 / norm(u2)
+cat("u2 : ", u2, "\n")
+cat("e2 : ", e2, "\n")
+
+u3 <- z - proj(z,u1) - proj(z,u2)
+u3 <- round(u3,10)
+e3 <- u3 / norm(u3)
+cat("u3 : ", u3, "\n")
+cat("Since u3 is (0, 0), we can omit u3 and conclude that e1 and e2 forms orthonormal basis of R^2. As we know, basis of R^2 have list which length is 2 so it is impossible to have three list of basis for R^2.")
+
+
+```
+## problem 6
+
+```{r}
+
+lp_norm <- function(x, p=1){
+  if(p =="max"){
+    return(max(abs(x)))
+  }
+  else{
+    lp <- sum((abs(x)^p))^(1/p)
+  }
+  return(lp)
+}
+
+
+
+zero <- rep(0, 10)
+p = 1
+lp_norm(zero,p)
+
+ones <- rep(1, 5)
+p = 3
+lp_norm(ones,p)
+
+u <- rep(0.4472136, 5)
+p = 2
+lp_norm(u,p)
+
+u <- c(-40:0)
+p = 100
+lp_norm(u,p)
+
+u <- c(1:1000)
+p = "max"
+lp_norm(u, p)
+```
+
+
+## problem 7
+
+```{r}
+u1 <- 1/sqrt(11) * c(3, 1, 1)
+u2 <- 1/sqrt(6) * c(-1, 2, 1)
+u3 <- 1/sqrt(66) * c(-1,-4, 7)
+
+#norms of u1, u2, and u3 are zero.
+lp_norm(u1,2)
+lp_norm(u2,2)
+lp_norm(u3,2)
+
+#<u1,u2> = <u1,u3> = <u2,u3> = 0
+t(u1) %*% u2
+t(u1) %*% u3
+
+t(u2) %*% u3
+
+
+```
+
+From the calculation above, u1, u2, and u3 are orthonormal vectors
+
+## problem 8
+
+### (a)
+
+```{r}
+
+X <- as.matrix(USArrests)
+class(X)
+
+```
+
+
+### (b)
+```{r}
+
+n= nrow(X)
+p = ncol(X)
+
+cat("# rows: ", n, "\n")
+cat("# columns: ", p, "\n")
+
+
+```
+
+
+### (c)
+```{r}
+
+D <- diag(1/n,n)
+sum(diag(D))
+
+```
+
+
+
+### (d) column means
+```{r}
+
+one <- rep(1,n)
+g <- t(X) %*% D %*% one
+g
+
+```
+
+
+### (e)  mean-centered matrix
+```{r}
+one <- matrix(1,n,1)
+Xc <- X - one %*% t(g)
+colMeans(Xc)
+
+```
+
+
+### (f) the (population) variance-covariance matrix
+```{r}
+
+V <- t(X) %*% D %*% X - g %*% t(g)
+V
+
+```
+
+
+### (g) D_s be a p×p diagonal matrix with elements on the diagonal equal to 1/Sj , where Sj is the standard deviation for the j-th variable
+```{r}
+
+D_s <-diag(c(1/sd(X[,1]),1/sd(X[,2]),1/sd(X[,3]), 1/sd(X[,4]))) 
+
+D_s <-diag(diag(1/sqrt(V)))
+D_s
+diag(D_s)
+
+```
+
+
+### (h) matrix of standardized data
+```{r}
+
+
+Z <- Xc %*% D_s
+
+colMeans(Z)
+apply(Z, 2, sd)
+
+```
+
+
+### (i) the (population) correlation matrix
+```{r}
+
+R <- D_s %*% V %*% D_s
+R
+
+```
+
+
+### (j) R can also be obtained as R = t(Z) D Z
+```{r}
+
+R <- t(Z) %*% D %*% Z
+R
+
+cor(X)
+
+```
+
+

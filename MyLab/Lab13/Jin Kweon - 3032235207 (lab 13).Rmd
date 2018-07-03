@@ -1,0 +1,229 @@
+---
+title: "Lab 13 - Jin Kweon (3032235207)"
+author: "Jin Kweon"
+date: "11/25/2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(base)
+library(tree)
+library(MASS)
+library(mda)
+library(class)
+library(e1071)
+library(kernlab)
+library(svmpath)
+library(graphics)
+library(ggplot2)
+library(mclust)
+library(stats)
+library(cluster)
+library(dplyr, warn.conflicts = T)
+library(factoextra)
+```
+
+#K-means Clustering
+
+https://www.youtube.com/watch?v=_aWzGGNrcic 
+
+https://sites.google.com/site/dataclusteringalgorithms/k-means-clustering-algorithm
+
+https://home.deib.polimi.it/matteucc/Clustering/tutorial_html/kmeans.html
+
+https://en.wikipedia.org/wiki/K-means_clustering 
+
+https://stats.stackexchange.com/questions/56500/what-are-the-main-differences-between-k-means-and-k-nearest-neighbours 
+
+https://www.quora.com/What-is-the-difference-between-k-means-and-hierarchical-clustering 
+
+
+
+
+
+
+
+
+I will use Euclidean distance for distance check.
+
+Q. I remember Professor say Cluster is belonged to categorical unsupervised method in the lecture 1. But, why is that....??? Seems like its continuous unsupervised method....
+
+Q. Does it always converge 100%? Or, is it possible to getting closer (meaning almost no changes) but not 100% converge?
+
+Q. I am little bit confused... in lecture slide 24 & hw 5, when we do when X is a vetor, not matrix, we have sum of squares being matrix, not a number... But, how can ours be just a number...?
+
+```{r}
+#iris %>% ggvis(~Sepal.Length, ~Sepal.Width, fill = ~Species) %>% layer_points()
+#iris %>% ggvis(~Petal.Length, ~Petal.Width, fill = ~Species) %>% layer_points()
+
+summary(iris) 
+
+euclid <- function(x, w){
+  dist <- sqrt(sum((x - w)^2))
+  return(dist)
+}
+
+total <- function(predictors){
+  center <- apply(predictors, 2, mean)
+  v <- rep(0, ncol(predictors))
+  for(i in 1:nrow(predictors)){
+    v <- v + (predictors[i,] - center)^2
+  }
+  return(sum(v))
+}
+
+wss <- function(x, y, means){
+  if(nrow(x) != length(y)){
+    stop("predictor variable and response variable have different lengths...")
+  }else{
+    combined <- as.data.frame(cbind(y = y, x = x))
+    combined$y <- as.factor(combined$y)
+    splited <- split(combined, combined$y)
+    ans <- c()
+    
+    for(i in 1:length(levels(combined$y))){
+      center <- means[i,]
+      v <- 0
+      for(j in 1:nrow(splited[[i]])){
+        v <- v + sum((splited[[i]][j,-1] - center)^2)
+      }
+      ans[i] <- v
+    }
+    return(ans)
+  }
+}
+
+my_kmeans <- function(X, k){
+  initial_iter <- sample.int(dim(X)[1], k)
+  initial_mean <- X[initial_iter, ]
+  
+  group <- c()
+  for(i in 1:dim(X)[1]){
+    distance <- c()
+    for(j in 1:k){
+      distance[j] <- euclid(as.vector(initial_mean[j, ]), as.vector(X[i, ]))
+    }
+    group[i] <- order(distance)[1] #tie ignore like knn
+  }
+  
+  new_mean <- as.data.frame(matrix(0, k, dim(X)[2]))
+    for(i in 1:k){
+      new_mean[i, ] <- apply(X[group == i, ], 2, mean)
+    }
+  
+    newgroup <- c()
+    for(i in 1:dim(X)[1]){
+      distance <- c()
+      for(j in 1:k){
+        distance[j] <- euclid(as.vector(new_mean[j, ]), as.vector(X[i, ]))
+      }
+      newgroup[i] <- order(distance)[1] #tie ignore like knn
+    }  
+  oldgroup <- group
+  group <- newgroup
+  condition <- 100
+  while (condition != 0) {
+    
+    new_mean <- as.data.frame(matrix(0, k, dim(X)[2]))
+    for(i in 1:k){
+      new_mean[i, ] <- apply(X[group == i, ], 2, mean)
+    }
+  
+    newgroup <- c()
+    for(i in 1:dim(X)[1]){
+      distance <- c()
+      for(j in 1:k){
+        distance[j] <- euclid(as.vector(new_mean[j, ]), as.vector(X[i, ]))
+      }
+      newgroup[i] <- order(distance)[1] #tie ignore like knn
+    }
+    
+    oldgroup <- group
+    group <- newgroup
+    condition <- sum(group != oldgroup)
+  }
+  cluster_size <- as.vector(table(group))
+  
+  new_mean <- as.data.frame(matrix(0, k, dim(X)[2]))
+  for(i in 1:k){
+    new_mean[i, ] <- apply(X[group == i, ], 2, mean)
+  }
+  cluster_means <- new_mean
+  clustering_vector <- group
+  
+  wss_cluster <- wss(X, clustering_vector, cluster_means)
+
+  totalwss <- sum(wss_cluster)
+  bss_over_tss <- ((total(X) - totalwss) / total(X)) * 100
+  
+  lists <- list(cluster_size, as.matrix(cluster_means), clustering_vector, wss_cluster, bss_over_tss)
+  return(lists)
+}
+
+my_kmeans(X = iris[,1:4], k = 3)
+kmeans(iris[,1:4], centers = 3)
+```
+
+![Algorithm](1.png)
+
+$\\$
+
+$\\$
+
+$\\$
+
+#Hierarchial Clustering
+
+Q. How to answer the last question: "Based on the results from cutree(), how does each linkage perform? Do they all
+separate (roughly) the observations into correct group?" 
+```{r}
+#summary(hclust(dist(iris[,1:4])^2, method  = "complete"))
+hc.complete <- iris[,1:4] %>% dist(method = "euclidean") %>% hclust(method = "complete")
+summary(hc.complete)
+
+hc.average <- iris[,1:4] %>% dist(method = "euclidean") %>% hclust(method = "average")
+summary(hc.average)
+
+hc.single <- iris[,1:4] %>% dist(method = "euclidean") %>% hclust(method = "single")
+summary(hc.single)
+
+par(mfrow = c(1,3))
+plot(hc.complete)
+rect.hclust(hc.complete, k = 3, border="red")
+plot(hc.average)
+rect.hclust(hc.average, k = 3, border="red")
+plot(hc.single)
+rect.hclust(hc.single, k = 3, border="red")
+
+a <- cutree(hc.complete, k = 3)
+b <- cutree(hc.average, k = 3)
+c <- cutree(hc.single, k = 3)
+table(a, b)
+table(a, c)
+table(b, c)
+a
+b
+c
+table(a)
+table(b)
+table(c)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

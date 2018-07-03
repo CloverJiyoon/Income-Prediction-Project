@@ -1,0 +1,537 @@
+---
+title: "Lab 2: Matrix Decompositions"
+author: "Prof. Gaston Sanchez"
+date: "Stat 154, Fall 2017"
+output: pdf_document
+fontsize: 12pt
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+library(knitr)
+library(ggplot2)
+```
+
+```{r echo = FALSE}
+read_chunk('lab02-matrix-decompositions-chunks.R')
+```
+
+# Introduction
+
+In this lab you will be working with the functions `svd()` and `eigen()` to 
+perform singular value decomposition, and eigenvalue decomposition,
+respectively.
+
+In addition, you will have to write code in R to implement the Power Method,
+which is a basic procedure to obtain the dominant eigenvector (and related 
+eigenvalue) of a square matrix.
+
+The content of this lab will introduce you to a series of concepts and 
+computations that will constantly emerge throughout the course. So it makes 
+more sense to start learning first about these two fundamental
+decompositions (SVD & EVD) before tackling any of the statistical learning 
+tasks (both supervised and unsupervised).
+
+
+
+## Data `USArrests`
+
+In this lab we are going to use the data set `USArrests` that comes in 
+R---see `?USArrests` for more information. This data set is about 
+"Violent Crime Rates by US State", and contains statistics, in arrests per 
+100,000 residents for assault, murder, and rape in each of the 50 US states 
+in 1973. Also given is the percent of the population living in urban areas.
+
+```{r}
+head(USArrests)
+```
+
+The four variables are:
+
+- `Murder`:	numeric	Murder arrests (per 100,000)
+- `Assault`: numeric	Assault arrests (per 100,000)
+- `UrbanPop`: numeric	Percent urban population
+- `Rape`: numeric	Rape arrests (per 100,000)
+
+
+
+# Singular Value Decomposition
+
+Let $\mathbf{M}$ be an $n \times p$ matrix of full column-rank $p$ (assume 
+$n > p$).
+The singular value decomposition (SVD) of $\mathbf{M}$ is given by:
+
+$$
+\mathbf{M} = \mathbf{U D V^\mathsf{T}}
+$$
+
+where:
+
+- $\mathbf{U}$ is an $n \times p$ matrix of left singular vectors
+- $\mathbf{D}$ is a $p \times p$ diagonal matrix of singular values
+- $\mathbf{V}$ is a $p \times p$ matrix of right singular vectors
+
+
+## Function `svd()`
+
+R provides the function `svd()` that allows you to compute the SVD of any
+rectangular matrix. Here's a basic example with `USArrests`:
+
+```r
+SVD <- svd(USArrests)
+```
+
+The default output of `svd()` is a list with three elements:
+
+- `u`: matrix of left singular vectors
+- `v`: matrix of right singular vectors
+- `d`: vector of singular values
+
+You can use the arguments `nu` and `nv` to have more control over the behavior
+of `svd()`:
+
+- `nu`: the number of left singular vectors to be computed.
+- `nv`: the number of right singular vectors to be computed.
+
+
+## SVD on raw data
+
+- Use `svd()` to compute the SVD of `USArrests`
+- Take the output of `svd()` and create the matrices $\mathbf{U}$, $\mathbf{D}$, and $\mathbf{V}$
+- Confirm that the data of `USArrests` can be obtained as the product of: 
+$\mathbf{U D V^\mathsf{T}}$
+
+```{r UDV, echo = FALSE}
+SVD <- svd(USArrests)
+U <- SVD$u
+V <- SVD$v
+D <- diag(SVD$d)
+
+# compare X with USArrests
+X <- U %*% D %*% t(V)
+all(abs(X - USArrests) < 1e-8)
+```
+
+## SVD and best Rank-one Approximations
+
+As we saw in lecture, one of the most attractive uses of the SVD is that it 
+allows you to decompose a matrix $\mathbf{M}$ as a sum of rank-one matrices
+of the form: $l_k \mathbf{u_k v_{k}^{\mathsf{T}}}$. This is the result of the
+famous [Eckart-Young-Mirsky](https://en.wikipedia.org/wiki/Low-rank_approximation) 
+theorem, which says that the best rank $r$ approximation to $\mathbf{X}$ 
+is given by:
+
+$$
+\mathbf{X_r} = \sum_{k = 1}^{r} l_k \mathbf{u_k v_{k}^\mathsf{T}} 
+$$
+
+where $l_k$ is the $k$-th singular vector, that is, the $k$-th diagonal element
+in $\mathbf{D}$.
+
+Consequently, the best $r=2$ rank approximation to $\mathbf{X}$ is:
+
+$$
+\mathbf{X_2} = l_1 \mathbf{u_1 v_{1}^\mathsf{T}} + l_2 \mathbf{u_2 v_{2}^\mathsf{T}} 
+$$
+
+In other words, $\mathbf{u_1}$, and $\mathbf{u_2}$ form the best 2-dimensional 
+approximation of the objects in $\mathbf{X}$ (living a $p$-dim space). 
+
+
+### Your turn
+
+- Confirm that the sum: $\sum_{k=1}^{4} l_h \mathbf{u_k v_{k}^{\mathsf{T}}}$
+equals `USArrests`
+
+```{r rank-ones-sum, echo = FALSE}
+# vector of singular values
+l <- SVD$d
+
+# compare Y with USArrests
+Y <- l[1] * U[,1] %o% V[,1] +
+  l[2] * U[,2] %o% V[,2] +
+  l[3] * U[,3] %o% V[,3] +
+  l[4] * U[,4] %o% V[,4]
+
+all(abs(Y - USArrests) < 1e-8)
+```
+
+- Create a new variable (vector) `MA` by adding `Murder + Assault`
+- Create a new data.frame `Arrests2` with the variables `Murder`,
+`Assault`, `UrbanPop`, `Rape`, and `MA`.
+- Compute the SVD of `Arrests2`
+- How does the singular values of `USArrests` compare to those of `Arrests2`?
+- What is the rank of `Arrests2`?
+
+```{r svd-arrests2, echo = FALSE}
+# SVD of Arrests
+Arrests2 <- USArrests
+Arrests2$MR <- USArrests$Murder + USArrests$Assault
+svd2 <- svd(Arrests2)
+l2 <- svd2$d
+
+# Rank = number of nonzero singular values
+sum(abs(l2 - 0) > 1e-8)
+```
+
+_Lab continues on next page_
+
+
+\newpage
+
+
+## Using SVD output to visualize data
+
+Knowing that we can approximate `USArrests` with 
+$l_1 \mathbf{u_1 v_{1}^\mathsf{T}} + l_2 \mathbf{u_2 v_{2}^\mathsf{T}}$,
+use $\mathbf{u_1}$ and $\mathbf{u_2}$ to visualize the States 
+with a simple scatterplot. Create your own scatterplot like the one below:
+
+```{r u2dim-plot, echo = FALSE, fig.align='center', fig.height=3.5, fig.width=5.5}
+# data frame of left singular vectors
+Udf <- as.data.frame(U)
+dimnames(Udf) <- list(rownames(USArrests), paste0("U",1:4))
+
+# scatterplot with ggplot
+ggplot(data = Udf, aes(x = U1, y = U2, label = rownames(Udf))) +
+  geom_text() +
+  ggtitle("Plot of States (first 2 left singular vectors)")
+```
+
+
+In the same way, use the first two right singular vectors of 
+$\mathbf{V}$ to graph a scatterplot (e.g. 2-dimensional representation)
+of the variables:
+
+```{r v2dim-plot, echo = FALSE, fig.align='center', fig.height=3, fig.width=4}
+Vdf <- as.data.frame(V)
+dimnames(Vdf) <- list(colnames(USArrests), paste0("V",1:4))
+
+# scatterplot with ggplot
+ggplot(data = Vdf, aes(x = V1, y = V2, label = rownames(Vdf))) +
+  geom_text() +
+  ggtitle("Plot of Variables (first 2 right singular vectors)")
+```
+
+Later in the course, we will see how to get---and interpret---better visualizations 
+(based on some kind of SVD or EVD factorization).
+
+
+-----
+
+# Eigenvalue Decomposition
+
+R provides the function `eigen()` to compute the spectral decomposition---better known as _eigenvalue decomposition_---of a square matrix.
+
+For multivariate analysis and statistical learning techniques, the typical 
+square matrices are some variation of the sum-of-squares and cross-products:
+$\mathbf{X^\mathsf{T} X}$ and $\mathbf{X X^\mathsf{T}}$. For instance, 
+assuming that variables in $\mathbf{X}$ are standardized (mean = 0, var = 1),
+the (sample) correlation matrix $\mathbf{R}$ is based on the product $\mathbf{X^\mathsf{T} X}$, that is: 
+$\mathbf{R} = \frac{1}{n-1} \mathbf{X^\mathsf{T} X}$,.
+
+```{r Rcorr}
+R <- cor(USArrests)
+```
+
+The output of `eigen()` is a list of two elements, `values` and `vectors`.
+
+```{r EVD_default}
+evd <- eigen(R)
+```
+
+You can be more specific and use the argument `symmetric = TRUE` to indicate
+that the input matrix is symmetric (and don't let R guess it by itself):
+
+```{r EVD_symmetric}
+evd <- eigen(R, symmetric = TRUE)
+```
+
+If you need only the eigenvalues you can use the parameter `only.values = TRUE`:
+
+```{r EVD_eigvalues}
+eigenvalues <- eigen(R, symmetric = TRUE, only.values = TRUE)
+eigenvalues
+```
+
+
+## Inverse of covariance matrix
+
+- Without using `scale()`, compute a matrix $\mathbf{X}$ as the mean-centered 
+data of `USArrests`.
+- Calculate the sum-of-squares and cross-products matrix 
+$\mathbf{S} = \mathbf{X^\mathsf{T} X}$
+- $\mathbf{S}$ is proportional to the (sample) covariance matrix 
+$\frac{1}{n-1} \mathbf{X^\mathsf{T} X}$. Confirm that `cov(X)` is equal to
+$\frac{1}{n-1} \mathbf{X^\mathsf{T} X}$.
+- Use `solve()` to compute the inverse $\mathbf{S}^{-1}$
+- Use `eigen()` to compute the EVD of $\mathbf{S} = \mathbf{V \Lambda V^\mathsf{T}}$
+- Confirm that $\mathbf{S}^{-1}$ can also be obtained as:
+$\mathbf{V \Lambda^{-1} V^\mathsf{T}}$
+
+```{r}
+# mean-centered matrix X
+means <- colMeans(USArrests)
+X <- as.matrix(sweep(USArrests, 2, means, FUN = "-"))
+
+# minor product moment XtX
+S <- t(X) %*% X
+
+# covariance matrix
+n <- nrow(USArrests)
+(1/(n-1)) * S
+cov(USArrests)
+
+# inverse of S via solve()
+Sinv <- solve(S)
+
+# inverse of S via EVD
+S_evd <- eigen(S)
+Vs <- S_evd$vectors
+Ls <- diag(1/S_evd$values)
+Vs %*%  Ls %*% t(Vs)
+```
+
+-----
+
+
+# Power Method
+
+The __Power Method__ is an iterative procedure for approximating eigenvalues.
+
+First assume that the matrix $\mathbf{A}$ has a dominant eigenvalue with 
+corresponding dominant eigenvector. Then choose an initial approximation 
+$\mathbf{w}_0$ (must be a non-zero vector) of one of the dominant eigenvectors. 
+This choice is arbitrary (and in theory should work with almost any vector).
+Then, form the sequence $\mathbf{w}_1, \mathbf{w}_2, \dots, \mathbf{w}_k$, 
+given by:
+
+\begin{align*}
+\mathbf{w}_1 &= \mathbf{A} \mathbf{w}_0 \\
+\mathbf{w}_2 = \mathbf{A} \mathbf{w}_1 &= \mathbf{A}^2 \mathbf{w}_0 \\
+\mathbf{w}_3 = \mathbf{A} \mathbf{w}_2 &= \mathbf{A}^3 \mathbf{w}_0 \\
+\vdots \\
+\mathbf{w}_k = \mathbf{A} \mathbf{w}_{k-1} &= \mathbf{A}^{k-1} \mathbf{w}_0 \\
+\end{align*}
+
+For large powers of $k$, and by __properly scaling__ this sequence, you will
+see that you obtain a good approximation $\mathbf{w}_k$ of the dominant 
+eigenvector of $\mathbf{A}$.
+
+Here's an example. Consider the following matrix
+
+$$
+\mathbf{A} = 
+\begin{pmatrix}
+2 & -12 \\
+1 & -5
+\end{pmatrix}
+$$
+
+Let's start with an initial nonzero vector $\mathbf{w}_0$
+$$
+\mathbf{w}_0 = 
+\begin{bmatrix}
+1 \\
+1
+\end{bmatrix}
+$$
+
+In R, we create $\mathbf{A}$ and $\mathbf{w}_0$
+```{r matrix_A1}
+# square matrix
+A <- matrix(c(2, 1, -12, -5), nrow = 2, ncol = 2)
+```
+
+```{r w0}
+# starting vector
+w0 <- c(1, 1)
+```
+
+Let's see what happens in the first four iterations:
+
+```{r sample_iterations}
+w_old <- w0
+
+for (k in 1:4) {
+  w_new <- A %*% w_old
+  print(paste('iteration =', k))
+  print(w_new)
+  cat("\n")
+  # update w_old
+  w_old <- w_new
+}
+```
+
+Note that the obtained vectors seem to be very different from one another.
+However, the difference is in the scale. This is why the part 
+"properly scaling" is very important. How do you scale $\mathbf{w}_k$?
+Well, there are different options, but probably the simplest one is by 
+using the $L_{\infty}$-norm.
+
+Reminder of $L_p$-norms:
+
+- $L_1$-norm: $\sum_{i=1}^{n} | w_i |$
+
+- $L_2$-norm: $\sqrt{\sum_{i=1}^{n} (w_i)^2}$
+
+- $L_{\infty}$-norm: $max \{ |w_1|, \dots, |w_n| \}$
+
+- $L_p$-norm: $\left ( \sum_{i=1}^{n} |w_i|^p \right )^{1/p}$
+
+
+
+## Description of Power Method
+
+Here is the procedure of the Power Method to find the largest eigenvalue and
+its corresponding eigenvector. Write code in R to implement such method.
+
+1. Start with an arbitrary vector $\mathbf{w}_0$
+
+2. Iteration for a series of steps $k = 0, 1, 2, \dots, n$ to form the 
+series of $\mathbf{w}_k$ vectors:
+$$
+\mathbf{w}_{k+1} = \frac{\mathbf{A w}_k}{s_{k+1}}
+$$
+where $s_{k+1}$ is the entry of $\mathbf{Aw}_k$ which has the largest absolute 
+value (this is actually a scaling operation dividing by the $L_{\infty}$-norm).
+
+3. When the scaling factors $s_k$ are not changing much, $s_{k+1}$ will be 
+close to the largest eigenvalue of $\mathbf{A}$, and $\mathbf{w}_{k+1}$ will 
+be close to the eigenvector associated to $s_{k+1}$.
+
+4. You can also veirfy that $s_{k+1}$ will be very close to the eigenvalue 
+given by the Rayleigh quotient:
+$$
+\lambda \approx \frac{\mathbf{w}_{k+1}^{\mathsf{T}} \mathbf{Aw}_{k+1}}{\mathbf{w}_{k+1}^{\mathsf{T}} \mathbf{w}_{k+1}}
+$$
+
+
+__Your turn__: Implement the power method to find the largest eigenvalue of the 
+following matrix:
+
+$$
+\mathbf{A} = 
+\begin{pmatrix}
+5 & -14 & 11 \\
+-4 & 4 & -4 \\
+3 & 6 & -3
+\end{pmatrix}
+$$
+
+Compare your results with those provided by `eigen()`. Keep in mind that
+the eigenvectors of `eigen()` have unit Euclidean norm (i.e. $L_2$-norm).
+Likewise, recall that the eigenvectors are only defined up to a constant: 
+even when the length is specified they are still only defined up to a scalar.
+
+
+### Other scaling options
+
+The scaling step in the power method:
+
+$$
+\mathbf{w}_{k+1} = \frac{\mathbf{A w}_k}{s_{k+1}}
+$$
+
+involves choosing a value for $s_{k+1}$. One option for $s_{k+1}$ is the entry 
+of $\mathbf{Aw}_k$ with the largest absolute value (i.e. $L_{\infty}$-norm).
+But you can actually use other scaling strategies. For instance, you can use
+the $L_1$-norm or the $L_2$-norm.
+
+Modify your code to use any other $L_p$-norm in the power algorithm, and 
+confirm that you get the same dominant eigenvectors and eigenvalues.
+
+
+## Deflation and more eigenvectors
+
+In order to get more eigenvectors and eigenvalues, you need to apply the 
+Power Method on the residual matrix obtained by __deflating__ $\mathbf{A}$
+with respect to the first eigenvector. This deflation operation is:
+
+$$
+\mathbf{A}_1 = \mathbf{A} - \lambda_1 \mathbf{v}_1 \mathbf{v}_{1}^\mathsf{T}
+$$
+
+where $\lambda_1$ is the first eigenvalue and $\mathbf{v}_1$ is the 
+corresponding eigenvalue.
+
+Deflate the matrix $\mathbf{A}$ and apply the power method on $\mathbf{A}_1$
+to obtain more eigenvalues and eigenvectors.
+
+```{r}
+## @knitr matrix_A2
+# square matrix
+A <- cbind(
+  c(5, 1),
+  c(1, 5)
+)
+
+
+## @knitr power_method
+# 1) dividing by L-max norm
+set.seed(123)
+w_old <- rnorm(2)
+
+crit <- 1
+iteration <- 1
+
+while (crit > 1e-9 & iteration <= 50) {
+  w_new <- A %*% w_old
+  # scaling to L-max norm
+  w_norm <- max(abs(w_new))
+  w_new <- w_new / w_norm
+  # check convergence
+  w_diff <- abs(w_old) - abs(w_new)
+  crit <- max(abs(w_diff))
+  # print
+  print(paste('iteration', iteration))
+  print(paste('crit =', crit))
+  print(w_new)
+  cat("\n")
+  # next iteration
+  iteration <- iteration + 1
+  w_old <- w_new
+}
+
+## @knitr eigenvalue
+# scaling factor(i.e. the norm) is close to eigenvalue
+w_norm
+# eigenvalue with Rayleigh quotient
+sum(w_new * (A %*% w_new)) / sum(w_new*w_new)
+
+w_1 <- w_new / sqrt(sum(w_new^2))
+w_1
+
+## @knitr deflation
+A1 <- A - w_norm * (w_1 %*% t(w_1))
+
+set.seed(123)
+w_old <- rnorm(2)
+
+crit <- 1
+iteration <- 1
+
+while (crit >  1e-9 & iteration <= 50) {
+  w_new <- A1 %*% w_old
+  # scaling to L-max norm
+  w_norm <- max(abs(w_new))
+  w_new <- w_new / w_norm
+  # check convergence
+  w_diff <- abs(w_old) - abs(w_new)
+  crit <- max(abs(w_diff))
+  # print
+  print(paste('iteration', iteration))
+  print(paste('crit =', crit))
+  print(w_new)
+  cat("\n")
+  # next iteration
+  iteration <- iteration + 1
+  w_old <- w_new
+}
+
+w_new / sqrt(sum(w_new^2))
+
+eigen(A)
+```
+

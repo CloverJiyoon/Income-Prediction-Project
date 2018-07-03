@@ -1,0 +1,240 @@
+---
+title: "154Lab8"
+author: "Jiyoon Clover Jeong"
+date: "10/23/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+library(ISLR)
+library(ggplot2)
+library(FactoMineR)
+
+names(Default)
+dim(Default)
+summary(Default)
+summary(subset(Default, default == 'Yes'))
+summary(subset(Default, default == 'No'))
+
+
+ggplot(data = Default, aes(x = balance, y = income, color = default)) + geom_point(alpha = 0.4) + labs(title = "Scatterplot between Balance and Income")
+
+
+ggplot(data = Default, aes(x = balance, fill = default, color = default)) +  geom_density(alpha = 0.4)
+
+
+ggplot(data = Default, aes(x = income, fill = default, color = default)) + geom_density(alpha = 0.4)
+
+```
+
+# OLS Regression
+
+```{r}
+default_numeric <- rep(0, nrow(Default))
+default_numeric[Default$default == 'Yes'] <- 1
+Default$default_num <- default_numeric
+ols_reg <- lm(default_num ~ balance, data = Default)
+
+summary(ols_reg)
+
+
+
+# Q
+ggplot(data = Default, aes(x = balance, y = default_num)) + geom_smooth(method = "lm", se = F) + geom_point(aes(col = default)) 
+
+
+
+#aes(x = Default$balance, y = Default$default_num)
+
+
+
+```
+
+# Logistic Regression
+
+```{r}
+
+
+logreg_default <- glm(default ~ balance, family = binomial, data = Default)
+summary(logreg_default)$coefficients
+logreg_default
+
+
+
+newdata = data.frame(balance = seq(100,2000,100))
+predict(logreg_default, newdata, type="response")
+
+logreg_default <- glm(default ~ student, family = binomial, data = Default)
+summary(logreg_default)
+
+
+logreg_default <- glm(default ~ balance + student + income, family = binomial, data = Default)
+summary(logreg_default)
+print("income coefficient is not significant")
+
+
+
+```
+
+
+# The Stock Market Smarket Data
+
+```{r}
+names(Smarket)
+dim(Smarket)
+summary(Smarket)
+
+
+cor <- cor(Smarket[,-9])
+cor
+PCA(Smarket[,-9])
+
+# plot(x = Smarket$Year, y = Smarket$Volume)
+# lines(lowess(Year,Volume), col="blue")
+
+
+ggplot(data = Smarket, aes(x = Year, y = Volume)) + geom_point() + geom_smooth(method = loess)
+
+
+
+```
+
+
+# Logistic Regression
+
+```{r}
+formula <- paste0("Lag", 1:5, collapse = " + ") 
+formula <- paste("Direction ~", formula, "+ Volume")
+fit <- glm(formula, family = binomial, data = Smarket)
+
+summary(fit)
+
+
+
+# Q : if new data ommited, fitted value will be used 
+head(predict(fit, type = "response"))
+
+```
+
+Lag1 seems to be the most significant. The coefficient of Lag1 is -0.073074 and has nagative sign.
+
+
+
+# Estimation of Parameters
+
+• Let y be the column vector of response Y
+• Let X be the n × (p + 1) input (design) matrix
+• Let p be the n-vector of fitted probabilities with the i-th element $p(xi, \beta^{old})$
+• Let W be an n×n diagonal matrix of weights with i-th element $p(xi, \beta^{old})(1-p(xi, \beta^{old}))$
+
+
+# Newton-Raphson algorithm
+
+```{r}
+
+newdirect <- rep(0, nrow(Smarket))
+newdirect[Smarket$Direction == "Up"] <- 1
+Smarket$newdirect <- newdirect
+n = nrow(Smarket)
+
+
+
+y <- as.matrix(Smarket[,10, drop = F])
+X <- as.matrix(cbind(1, Smarket[, c(2:7), drop = F]))
+p <- c(0)
+W <- diag(0,n)
+b_old <- matrix(0, ncol(X), 1)
+b_new <- matrix(0, ncol(X), 1)
+diff <- 10^10
+
+while(diff >10^(-7)){
+   b_old <- b_new
+  for(j in 1:n){
+    p[j] <- exp( X[j,, drop = F] %*% b_old )   /
+      (1 + exp( X[j, , drop = F] %*% b_old ) )
+
+    W[j,j] = p[j] * (1- p[j])
+
+  }
+
+  z <- X %*% b_old + solve(W) %*% (y - p)
+  b_new <- solve(t(X) %*% W %*% X ) %*% t(X) %*% W %*% z
+  
+  diff <- sqrt(sum((b_new - b_old)^2))
+
+}
+
+b_new
+ 
+```
+
+# Simplified Algorithm
+
+```{r}
+
+b_old <- matrix(0, ncol(X), 1)
+y <- as.matrix(Smarket[,10, drop = F])
+X <- as.matrix(cbind(1, Smarket[, c(2:7), drop = F]))
+p <- c(0)
+diff <- 10^10
+
+
+while(diff >10^(-7)){
+  b_old <- b_new
+  for(j in 1:n){
+    p[j] <- exp( X[j, , drop = F] %*% b_old )   /
+      (1 + exp( X[j, , drop = F] %*% b_old ) )
+    
+  }
+  X_hat <- sweep(X, MARGIN = 1, p * (1-p), FUN = '*') 
+  
+  b_new <- b_old + solve(t(X) %*% X_hat) %*% t(X) %*% (y-p)
+  
+  diff <- sqrt(sum((b_new - b_old)^2))
+  
+}
+
+b_new
+
+
+
+
+```
+
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+```
+
+

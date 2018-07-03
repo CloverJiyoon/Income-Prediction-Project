@@ -1,0 +1,213 @@
+---
+title: "154Lab5"
+author: "Jiyoon Clover Jeong"
+date: "10/2/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+library(caret)
+```
+
+$Var(B) = \frac{\sigma^2}{\sum_i (X_i - \bar{X})^2}$ 
+
+# Confidence Interval 
+
+```{r}
+fit <- lm(mpg ~ disp + hp, data = mtcars)
+n <- nrow(mtcars)
+p <- 2
+summary <- summary(fit)
+summary(fit)
+
+
+# CI for beta0 (intercept)
+
+CI <- fit$coefficients[1] + c(-1, 1) * qt(1-0.05/2, n-p-1) *
+  summary$coefficients[1,2]
+CI
+
+confint(fit)
+
+
+```
+
+
+
+# Hypothesis Testing
+
+
+1. c = 0
+
+2. Two sided, *** means p value is between 0 and 0.001 (that we can reject the null with confidence) . means p value is between 0.05 and 0.1. 
+
+3. Since p value of is larger than 0.05, we do not reject the null
+
+## 4
+
+
+```{r}
+
+t <- (fit$coefficients[2] + 0.05) / summary$coefficients[2,2]
+pval <- 1- pt(t, n-p-1)
+as.numeric(pval)
+print("reject the null hypothesis since p value is small")
+
+
+```
+
+
+# Assessment of model predictive power
+
+
+```{r}
+y <- mtcars$mpg
+x <- mtcars$disp
+
+mse <- c(0)
+
+for(i in 1:6){
+  fit <- lm(y ~ poly(x, i, raw = T))
+  summary <- summary(fit)
+  mse[i] <- sum( (y - fit$fitted.values)^2 ) /n
+  
+}
+
+mse
+
+plot(mse)
+
+
+
+```
+
+
+6th model has the smallest MSE
+
+MSE is decreasing as we add predictors
+
+
+
+```{r}
+
+
+for(j in 1:3){
+  samples <- sample(n, n*0.8 +1)
+  train <- mtcars[samples, c(1,3)]  
+  test <- mtcars[-samples, c(1,3)]
+  
+  for(i in 1:6){
+    # fit <- lm(mpg ~ poly(disp, i, raw = T), data = train)
+    # 
+    # coefficients <- as.matrix(fit$coefficients)
+    # yhat <- cbind(1, poly(as.matrix(test), i, raw = T)[,1:i]) %*% coefficients
+    # 
+    # mse[i] <- sum( (test[,1] - yhat)^2 )/ nrow(test)
+    # 
+    fit <- lm(mpg ~ poly(disp, i, raw=T), data = train)
+    yhat <- predict(fit, newdata = test)
+    mse[i] <- sum((test[,"mpg"] - yhat)^2) / nrow(test)
+  }
+  
+  print(mse)   # beta0 + beta1 has smallest MSE
+  plot(mse)
+  
+}
+ 
+
+
+
+```
+
+
+
+# Cross Validation
+
+```{r}
+
+folds <- createFolds(mtcars$mpg)
+
+folds
+mse <- matrix(0,6,10)
+
+for(j in 1:6){
+  for(i in 1:10){
+  fit <- lm(mpg~ poly(disp, j, raw = T) , data= mtcars[-folds[[i]], ])
+  yhat <- predict(fit , newdata = mtcars[folds[[i]], ])
+  mse[j,i] = sum((mtcars[folds[[i]],1] - yhat)^2) / length(folds[[i]])
+  }
+}
+
+mse
+
+mse_cv <- rowMeans(mse)
+
+
+par(mfrow = c(1, 2))
+plot(mse_cv)
+plot(mtcars$disp, mtcars$mpg)
+
+
+
+```
+
+
+
+
+# Bootstrap
+
+
+```{r}
+
+mse <- matrix(0,nrow = 6,ncol = 400)
+mse_bootstrap <- c(0)
+sd <- c(0)
+
+for(j in 1:6){
+    for(i in 1:400){
+    samplerow <- sample(n, n, replace = T)
+    
+    train <- mtcars[samplerow, c(1,3)]
+  
+    fit <- lm(mpg ~ poly(disp, j, raw = T), data = train)
+    
+    yhat <- predict(fit, newdata = mtcars[-unique(samplerow), ])
+    
+    mse[j,i] <- sum((mtcars[-unique(samplerow),] - yhat)^2) /
+      (n- length(unique(samplerow)))
+  
+    }
+  sd[j] <- sd(mse[j,])
+  
+  mse_bootstrap[j] <-sum(mse[j,])/400
+}
+
+
+
+par(mfrow = c(1, 2))
+
+plot(mse_bootstrap)
+
+plot(sd)
+
+for(i in 1:6){
+  hist(mse[i,], main = paste("MSE ",i))
+}
+
+
+
+
+
+
+
+
+```
+
+
+```{r}
+
+
+
+```

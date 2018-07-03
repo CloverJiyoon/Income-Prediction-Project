@@ -1,0 +1,139 @@
+---
+title: "PPT20"
+author: "Jiyoon Clover Jeong"
+date: "10/25/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(dplyr)
+```
+
+```{r PPT23}
+dat <- read.csv("/Users/cloverjiyoon/2017Fall/Stat 154/data/chd.csv")
+
+head(dat)
+
+groups <- c(19, seq(29, 59, by = 5), 69)
+group_labels <- paste(c(groups[-9]+1), c(groups[-1]), sep = "-")
+age_group <- cut(dat$age, breaks = groups, labels = group_labels,
+include.lowest = TRUE)
+table(age_group)
+
+
+dat$age_group <- age_group
+head(dat)
+
+
+tbl <- dat %>%
+group_by(age_group) %>%
+summarize(prop_chd = mean(chd))
+
+tbl
+
+plot(1:nrow(tbl), tbl$prop_chd, las = 1, pch = 19, xaxt = 'n', xlab = "Age Group", ylab = "Proportion CHD")
+# connect points with a line
+lines(1:nrow(tbl), tbl$prop_chd, lwd = 4, col = '#77777755')
+# add better labels to x-axis
+mtext(text = tbl$age_group, side = 1, at = 1:nrow(tbl))
+
+
+
+
+# x-y coordinates for various logistic functions
+n = 100
+beta_vals <- c(0.1, 0.5, 1, 2, 3)
+betas <- rep(beta_vals, each = n)
+x <- rep(seq(-4, 4, length.out = n), length(beta_vals))
+y <- exp(betas*x) / (1 + exp(betas*x))
+# assemble data frame for plotting purposes
+logistic <- data.frame(
+x = x, y = y, beta = as.factor(betas)
+)
+# some examples of logistic curves
+ggplot(data = logistic, aes(x = x, y = y, group = beta)) +
+geom_line(aes(col = beta), size = 1)
+
+```
+
+
+```{r PPT 24}
+
+
+
+library(reshape2)
+library(ggplot2)
+iris_melt <- melt(iris, id = "Species")
+ggplot(data = iris_melt, aes(x = variable, y = value)) +
+geom_boxplot() +
+ggtitle("Boxplot of predictors (iris data)")
+
+ggplot(data = iris_melt, aes(x = variable, y = value)) +
+geom_boxplot(aes(fill = Species, color = Species)) +
+ggtitle("Boxplot of predictors (iris data)")
+
+
+ggplot(data = iris_melt, aes(x = value)) + geom_density(aes(fill = Species, color = Species), alpha = 0.7) + facet_wrap(~ variable, scales =
+'free_y') + ggtitle("Kernel densities of predictors (iris data)")
+
+
+
+
+
+ggplot(data = iris, aes(x = Sepal.Length, group = Species)) +
+geom_density(aes(fill = Species)) +
+facet_grid(Species ~ .) +
+ggtitle("Sepal Length by Species")
+
+
+x_means <- tapply(iris$Sepal.Length, iris$Species, mean)
+x_means
+```
+
+```{r}
+library(MASS)
+
+geo_disc <- lda(Species ~ ., data = iris)
+geo_disc$scaling
+
+# canonical variables
+Z <- as.matrix(iris[ ,1:4]) %*% geo_disc$scaling
+iris_lda <- data.frame(Z)
+iris_lda$Species <- iris$Species
+head(iris_lda, n = 5)
+
+
+```
+
+
+
+
+
+```{r}
+
+
+
+```
+
+
+
+
+```{r}
+
+
+
+```
+
+
+
+
+```{r}
+
+
+
+```
+
+
+

@@ -1,0 +1,306 @@
+---
+title: "154Lab10"
+author: "Jiyoon Clover Jeong"
+date: "11/4/2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(class)
+library(caret)
+library(mvtnorm)
+library(MASS)
+library(ggplot2)
+library(reshape)
+
+```
+
+
+# k-Nearest Neighbors
+
+```{r}
+
+set.seed(10)
+
+data_norm <- function(x) { ((x- min(x)) / (max(x) - min(x))  )}
+
+iris_norm <- as.data.frame(lapply(iris[,-5], data_norm))
+
+my_knn <- function(X_train, X_test, Y_train, k){
+  
+  n <- dim(X_test)[1]
+  n
+  m <- dim(X_train)[1]
+  m
+  
+  classified <- c()
+  
+  for(i in 1:n){
+    around <- c()
+    dist <- c()
+    
+    for(j in 1:m){
+      dist[j] <- sqrt(sum((X_test[i,] - X_train[j,])^2))
+    }
+    around <- Y_train[which(dist %in% sort(dist, decreasing = F)[1:k])]
+    
+    classified[i] <- names(which.max(table(around)))
+  }
+  
+  return(classified)
+  
+}
+
+
+
+train_idx <- sample(nrow(iris), 90)
+train_set <- iris[train_idx, ]
+test_set <- iris[-train_idx, ]
+my_knn_pred <- my_knn(train_set[, -5], test_set[, -5], train_set$Species, k=1)
+knn_pred <- knn(train_set[, -5], test_set[, -5], train_set$Species, k=1)
+
+my_knn_pred
+knn_pred
+
+
+table(my_knn_pred == knn_pred)
+
+
+```
+
+
+# k-NN CV
+
+
+```{r}
+
+
+set.seed(10)
+
+find_k_CV <- function(X_train, Y_train, k = 1:10, nfold = 10){
+  
+  set.seed(11)
+  
+  fold <- createFolds(X_train[,1], nfold)
+  n <- length(k)
+  
+  mse <- matrix(0, n, nfold)
+  
+  for(i in 1:n){
+    for(j in 1:nfold){
+     # my_knn_pred<- my_knn(X_train[-fold[[j]], ], X_train[fold[[j]], ],  Y_train[-fold[[j]] ], i)
+      
+      my_knn_pred <- knn(X_train[-fold[[j]], ], X_train[fold[[j]], ],  Y_train[-fold[[j]] ], i)
+      
+      mse[i,j] <- mean(my_knn_pred != Y_train[fold[[j]]])
+      
+    }
+  }
+  
+  
+  return(which.min(rowMeans(mse)))
+}
+
+
+
+
+
+
+find_k_CV(train_set[, -5], train_set[, 5])
+
+```
+
+
+# Comparisons
+
+```{r}
+
+
+set.seed(100)
+
+expit <- function(x) {
+  exp(x) / (1 + exp(x))
+}
+
+
+gen_datasets <- function() {
+
+  #1
+  id <- diag(c(1, 1))
+  df1 <- data.frame(y=factor(rep(c(0, 1), each=50)),
+                    rbind(rmvnorm(50, mean=c(0, 0), sigma = id),
+                          rmvnorm(50, mean=c(1, 1), sigma = id)))
+  
+  
+  #2
+  covmat <- matrix(c(1, -0.5, -0.5, 1), nrow=2)
+  df2 <- data.frame(y=factor(rep(c(0, 1), each=50)), 
+                    rbind(rmvnorm(50, mean=c(0, 0), sigma = covmat), 
+                          rmvnorm(50, mean=c(1, 1), sigma = covmat)))
+  
+  
+  
+  #3
+  mu <- c(0, 0)
+  sigma <- matrix(c(1, 1/2, 1/2, 1), 2)
+  nu <- 4
+  n <- 50 # Number of draws
+  x_first <- t(t(mvrnorm(n, rep(0, length(mu)), sigma) * sqrt(nu / rchisq(n, nu))) + mu)
+  
+  mu <- c(1, 1)
+  sigma <- matrix(c(1, 1/2, 1/2, 1), 2)
+  nu <- 4
+  n <- 50 # Number of draws
+  x_second <- t(t(mvrnorm(n, rep(0, length(mu)), sigma) * sqrt(nu / rchisq(n, nu))) + mu)
+  
+  df3 <- data.frame(y=factor(rep(c(0, 1), each=50)), rbind(x_first, x_second))
+  
+  
+  
+  #4
+  covmat2 <- matrix(c(1, 0.5, 0.5, 1), nrow=2)
+  df4 <- data.frame(y=factor(rep(c(0, 1), each=50)), 
+                    rbind(rmvnorm(50, mean=c(0, 0), sigma = covmat2), 
+                          rmvnorm(50, mean=c(1, 1), sigma = covmat)))
+
+  
+  
+  #5  
+  x <- matrix(rnorm(200), ncol=2)
+  #get x1^2, x2^2, and interaction term...
+  df5_temp <- data.frame(x^2, x[, 1] * x[, 2])
+  
+  beta <- c(0, 2, -1, -2)
+  y <- apply(df5_temp, 1, function(row){
+    p <- expit(sum(c(1, row) * beta)) #get pi
+    #using pi above, get yi each time...
+    sample(x=c(0, 1), size=1, prob=c(1-p, p))
+    }
+  )
+  df5 <- data.frame(y=factor(y), x)
+  
+  
+  
+  #6
+  x <- matrix(rnorm(200), ncol=2)
+  #make true/false...
+  y <- 1 * (x[, 1]^2 + x[, 2]^2 > qchisq(p=0.5, df=2))
+  df6 <- data.frame(y=factor(y), x)
+  
+  
+  return(list(df1, df2, df3, df4, df5, df6))
+  
+  
+}
+
+
+
+
+
+
+
+```
+
+
+
+
+```{r}
+
+set.seed(11)
+
+
+error <- array(0, dim = c(5,6,100))
+
+
+
+
+
+for(i in 1:100){
+  gendata <- gen_datasets()
+  fold <- createDataPartition(gendata[[1]][,1], p = 0.8)$Resample1
+  fold
+  for(j in 1:6){
+    
+      
+      data <- gendata[[j]]
+      
+      # Logistic
+      
+      fit <- glm(y ~ ., family = binomial, data = data[fold,] )
+      summary(fit)
+      error[1,j,i] <- mean((as.numeric(as.character(data[-fold, 1])) - predict(fit, data[-fold, 2:3], type = "response"))^2)
+      
+      # LDA
+      
+      fit <- lda(y ~., data = data[fold, ])
+      summary(fit)
+      predicted <- as.numeric(as.character(predict(fit, data[-fold, 2:3], type = "response")$class))
+        
+      error[2,j,i] <-  mean(((as.numeric(as.character(data[-fold, 1]))) - predicted)^2)
+      
+      
+      #QDA
+      
+      fit <- qda(y ~., data = data[fold, ])
+      summary(fit)
+      predicted <- as.numeric(as.character(predict(fit, data[-fold, 2:3], type = "response")$class))
+        
+      error[3,j,i] <-  mean(((as.numeric(as.character(data[-fold, 1]))) - predicted)^2)
+      
+      
+      #KNN
+  
+      predicted <- as.numeric(as.character(knn(data[fold, -1], data[-fold, -1], data[fold,1], k=1)))
+      error[4,j,i] <-  mean(((as.numeric(as.character(data[-fold, 1]))) - predicted)^2)
+      
+      # KNN CV 
+      
+      k <- find_k_CV(data[,-1], data[,1])
+      predicted <- as.numeric(as.character(knn(data[fold, -1], data[-fold, -1], data[fold,1], k=k)))
+
+      error[5,j,i] <- mean(((as.numeric(as.character(data[-fold, 1]))) - predicted)^2)
+    
+  }
+}
+
+
+
+for(i in 1:6){
+  scenario <- data.frame(logistic = error[1,i,], lda = error[2,i,], qda = error[3,i,], knn = error[4,i,], knn_cv = error[5,i,])
+  
+  melted <- melt(scenario)
+  
+  print(ggplot(melted, aes(x = factor(variable), value)) + geom_boxplot() )
+}
+
+
+
+
+error
+
+
+```
+
+
+
+
+```{r}
+
+
+
+
+```
+
+
+
+
+```{r}
+
+
+
+
+```
+

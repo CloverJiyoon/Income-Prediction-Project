@@ -1,0 +1,327 @@
+---
+title: "154Lab3"
+author: "Jiyoon Clover Jeong"
+date: "9/18/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(GGally)
+library(grid)
+library(gridExtra)
+library(plotrix)
+library(ggplot2)
+library(lattice)
+```
+
+
+```{r}
+
+dat <- read.csv("/Users/cloverjiyoon/2017Fall/Stat 154/data/wholesale.csv")
+
+str(dat)
+
+dat$Channel <- as.factor(dat$Channel)
+levels(dat$Channel) <- c("Horeca","Retail")
+dat$Region <- as.factor(dat$Region)
+levels(dat$Region) <- c("Lisbon","Oporto", "Other")
+
+head(dat)
+
+table(dat$Channel)
+table(dat$Region)
+
+```
+
+
+```{r}
+
+summary(dat)
+
+
+par(mfrow = c(2,3))
+boxplot(dat$Fresh, main = "Fresh")
+boxplot(dat$Milk, main = "Milk")
+boxplot(dat$Grocery, main = "Grocery")
+boxplot(dat$Frozen, main = "Frozen")
+boxplot(dat$Detergents_Paper, main = "Detergents paper")
+#boxplot(dat$Delicassen, main = "Delicassen", is.na)
+
+
+
+hist(dat$Fresh, main = "Fresh")
+hist(dat$Milk, main = "Milk")
+hist(dat$Grocery, main = "Grocery")
+hist(dat$Frozen, main = "Frozen")
+hist(dat$Detergents_Paper, main = "Detergents paper")
+#hist(dat$Delicassen, main = "Delicassen")
+
+
+
+den_fresh <- density(dat$Fresh, adjust = 0.7)
+plot(den_fresh, main = "Fresh")
+polygon(den_fresh, col = "red", border = "blue")
+density(dat$Fresh)
+
+den_milk <- density(dat$Milk, adjust = 0.7)
+plot(den_milk, main = "Milk")
+polygon(den_milk, col = "red", border = "blue")
+density(dat$Milk)
+
+den_grocery <- density(dat$Grocery, adjust = 0.7)
+plot(den_grocery, main = "Grocery")
+polygon(den_grocery, col = "red", border = "blue")
+density(dat$Grocery)
+
+den_frozen <- density(dat$Frozen, adjust = 0.7)
+plot(den_frozen, main = "Frozen")
+polygon(den_frozen, col = "red", border = "blue")
+density(dat$Frozen)
+
+den_det <- density(dat$Detergents_Paper, adjust = 0.7)
+plot(den_det, main = "Detergent paper")
+polygon(den_det, col = "red", border = "blue")
+density(dat$Detergents_Paper)
+
+# den_del <- density(dat$Delicassen, adjust = 0.7)
+# plot(den_del, main = "Delicassen")
+# polygon(den_del, col = "red", border = "blue")
+# density(dat$Delicassen)
+
+
+#correlation matrix
+cor(as.matrix(dat[,-c(1,2)]))
+
+
+#Scatterplot matrix
+pairs(dat[,-c(1,2)])
+
+#ggpairs(dat[,-c(1,2)])
+
+
+
+```
+
+
+
+```{r}
+
+# PCA with prcomp()
+pca_prcomp <- prcomp(dat[ ,3:8], scale. = TRUE)
+# what's in a prcomp object?
+names(pca_prcomp)
+
+
+# eigenvalues
+eigenvalues <- pca_prcomp$sdev^2
+eigenvalues
+sum(eigenvalues)  # number of variable
+
+# scores or principal components
+scores <- pca_prcomp$x
+round(head(scores, 5), 3)
+
+# loadings or weights
+loadings <- pca_prcomp$rotation
+round(loadings, 3)
+
+
+
+```
+
+
+
+```{r}
+
+# PCA with princomp()
+pca_princomp <- princomp(dat[ ,3:8], cor = TRUE)
+# what's in a princomp object?
+names(pca_princomp)
+
+# eigenvalues
+pca_princomp$sdev^2
+
+# scores or principal components
+round(head(pca_princomp$scores, 5), 3)
+
+# loadings or weights
+pca_princomp$loadings
+
+print(pca_princomp$loadings, cutoff = 0)  
+
+
+
+```
+
+
+
+# Q
+
+prcomp: 1/(n)
+
+princomp: 1/(n-1)
+
+
+
+```{r}
+
+n=6
+percentage <- eigenvalues/n * 100
+cum_per <- cumsum(percentage) 
+table <- as.data.frame(cbind(eigenvalues, percentage, cum_per))
+table
+
+barplot(table[,"percentage"], main = "Barchart of eigenvalues", names = c(paste("PC", 1:6)))
+
+
+#   ggplot(table, aes(table[,3])) + geom_bar()    # Q
+
+```
+
+
+#### 1. 2 PC
+
+```{r}
+
+for(i in 1:length(table[,1])){
+  if(table[i,3]>70)
+    break
+}
+
+i
+
+```
+
+
+
+#### 2. 
+```{r}
+
+emean<- mean(table[,1])
+sum = 0
+for(i in 1:length(table[,1])){
+  if(table[i,1]> emean)
+    sum = sum + 1
+}
+sum
+
+```
+
+
+#### 3.  same as #2
+
+
+#### 4. 
+```{r}
+
+
+for(i in 1:length(table[,1])){
+  if(table[i,1]<0.7)
+    break
+}
+
+i-1
+
+```
+
+
+
+#### 5.
+
+```{r}
+
+ggplot(data = as.data.frame(table[,1]),aes(x = 1:6,y = eigenvalues)) + geom_point() + geom_line() + 
+ggtitle("Screeplot of Eigenvalues") + labs(x = "PC", y = "e-values") + scale_x_continuous(breaks=seq(1,12,1))
+
+```
+
+so elbow occurs at PC3
+
+```{r}
+
+corr <- cor(as.matrix(dat[,3:8]), scores)
+corr
+
+```
+
+
+
+```{r}
+
+corr <- as.data.frame(corr)
+
+p <- ggplot(data = corr, aes(x = PC1, y = PC2, label = rownames(corr))) + geom_point() + geom_text(size = 3) + 
+  xlim(c(-1.1,1.1)) + ylim(c(-1.1,1.1)) +
+  geom_segment(data=corr, aes(x=0, xend=PC1, y=0, yend=PC2), color="black", arrow = arrow(length=unit(0.0001,"npc")), size = 0.2) 
+
+g<-p+annotate("path",
+   x=0+1*cos(seq(0,2*pi,length.out=100)),
+   y=0+1*sin(seq(0,2*pi,length.out=100)),
+   size = 0.2)
+
+g
+
+```
+
+
+
+#### Q
+
+What label—and interpretation—would you give to PC1?
+• What label—and interpretation—would you give to PC2?
+• What label—and interpretation—would you give to PC3?
+• What does it mean that all the correlations with PC1 have the same sign?
+• What does it mean that in PC2 some loadings are positive and the others negative
+
+
+
+```{r}
+
+p1 <- ggplot(dat, aes(scores[,1], y=scores[,2])) + geom_point(shape=1) + xlab("PC1") + ylab("PC2") 
+
+
+p2 <- ggplot(dat, aes(scores[,1], y=scores[,3])) + geom_point(shape=1) + xlab("PC1") + ylab("PC3") 
+
+
+p3 <- ggplot(dat, aes(scores[,2], y=scores[,3])) + geom_point(shape=1) + xlab("PC2") + ylab("PC3")
+
+
+grid.arrange(p1, p2, p3, ncol = 2)
+
+```
+
+
+
+```{r}
+
+par(mfrow = c(2,2))
+
+# biplot
+ biplot(pca_prcomp, scale = 0)
+
+biplot(pca_prcomp, scale = 0.3)
+
+biplot(pca_prcomp, scale = 0.5)
+
+ biplot(pca_prcomp, scale = 1)
+
+
+#grid.arrange(p1, p2, ncol = 2)
+
+#multiplot(p1,p2,p3,p4,cols = 4)
+```
+
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+```

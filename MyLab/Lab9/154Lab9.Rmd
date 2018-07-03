@@ -1,0 +1,472 @@
+---
+title: "154Lab9"
+author: "Jiyoon Clover Jeong"
+date: "10/30/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(MASS)
+library(mvtnorm)
+library(caret)
+library(dummies)
+library(nnet)
+```
+
+
+
+# LDA
+
+```{r}
+
+my_lda <- function(X , y){
+  
+  
+  K <- nlevels(y)
+  n <- length(y)
+  p <- dim(X)[2]
+  
+  splited <- split(X,y)
+  pi_hat <- sapply(splited, nrow) / n
+  #pi_hat
+  
+  mu_hat <- t(sapply(splited, colMeans))
+  #class(mu_hat)
+  #mu_hat
+  
+  
+  sigma_hat <- matrix(0,p,p)
+  
+  for(i in 1:K){
+    
+    J <- dim(splited[[i]])[1]
+    for(j in 1:J){
+      xi <-as.matrix(splited[[i]][j, , drop = F])
+      xi
+      sigma_hat <- sigma_hat + t(xi - mu_hat[i,]) %*% (xi - mu_hat[i,])
+      sigma_hat
+    }
+    
+  }
+  sigma_hat <- (1 / (n - K)) * sigma_hat
+  sigma_hat
+  
+  return(list(pi_hat = pi_hat, mu_hat = mu_hat, sigma_hat = sigma_hat))
+  
+  
+}
+
+
+mylda <- my_lda(iris[1:140,1:4], iris[1:140,5])
+lda_default <- lda(Species ~ ., data = iris[1:140,])
+
+mylda$pi_hat
+lda_default$prior
+
+mylda$mu_hat
+lda_default$means
+
+mylda$sigma_hat
+
+
+
+# https://www.quora.com/Mathematical-Modeling-How-are-posterior-probabilities-calculated-in-linear-discriminant-analysis
+
+
+predict_my_lda <- function(fit, newdata){
+  
+  dmvnormm <- data.frame()
+  m <- dim(newdata)[1]
+  K <- dim(fit$mu_hat)[1]
+  
+  posterior <- matrix(0, m, K)
+  
+  
+  for(i in 1:K){
+    dmvnormm <- rbind(dmvnormm,dmvnorm(newdata, fit$mu_hat[i,], fit$sigma_hat))
+  }
+ 
+  dmvnormm 
+  
+  
+  for(i in 1:m){
+    numerator <- sum(dmvnormm[,i] * fit$pi_hat)
+    for(j in 1:K){
+      posterior[i, j] <- dmvnormm[j, i] * fit$pi_hat[j] / numerator
+      
+    }
+  }
+  
+  colnames(posterior) <- names(fit$pi_hat)
+  posterior
+  
+  class <- apply(posterior, 1, function(x)  names(which.max(x)))
+  
+  return(list(class = class, posterior = posterior))
+}
+
+
+predictlda <- predict_my_lda(mylda, iris[141:150, -5])
+predictlda_default <- predict(lda_default, iris[141:150,])
+
+
+
+
+predictlda_default$class
+predictlda$class
+
+
+# Q : ??? 
+predictlda_default$posterior
+predictlda$posterior
+
+
+```
+
+
+
+# QDA
+
+
+```{r}
+
+
+my_qda <- function(X , y){
+  
+  n <- length(y)
+  p <- dim(X)[2]
+  K <- nlevels(y)
+  splited <- split(X,y)
+  pi_hat <- sapply(splited, nrow) / n
+  #pi_hat
+  
+  mu_hat <- t(sapply(splited, colMeans))
+  #class(mu_hat)
+  #mu_hat
+  
+  sigma_hat <- array(0, dim = c(p, p, K))
+  
+  for(i in 1:K){
+    sigma_hat[,,i] <- cov(splited[[i]])
+  }
+  
+  sigma_hat
+  
+  return(list(pi_hat = pi_hat, mu_hat = mu_hat, sigma_hat = sigma_hat))
+  
+
+}
+
+myqda <- my_qda(iris[1:140,1:4], iris[1:140,5])
+qda_default <- qda(Species ~ ., data = iris[1:140,])
+
+myqda$pi_hat
+qda_default$prior
+
+myqda$mu_hat
+qda_default$means
+
+myqda$sigma_hat
+
+
+
+
+predict_my_qda <- function(fit, newdata){
+  
+  dmvnormm <- data.frame()
+  m <- dim(newdata)[1]
+  K <- dim(fit$mu_hat)[1]
+  
+  posterior <- matrix(0, m, K)
+  
+  
+ 
+  for(i in 1:K){
+    dmvnormm <- rbind(dmvnormm,dmvnorm(newdata, fit$mu_hat[i,], fit$sigma_hat[,,i]))
+  }
+ 
+  dmvnormm 
+  
+  
+  for(i in 1:m){
+    numerator <- sum(dmvnormm[,i] * fit$pi_hat)
+    for(j in 1:K){
+      posterior[i, j] <- dmvnormm[j, i] * fit$pi_hat[j] / numerator
+      
+    }
+  }
+  
+  colnames(posterior) <- names(fit$pi_hat)
+  posterior
+  
+  class <- apply(posterior, 1, function(x)  names(which.max(x)))
+  
+  return(list(class = class, posterior = posterior))
+}
+
+
+predictqda <- predict_my_qda(myqda, iris[141:150, -5])
+predictqda_default <- predict(qda_default, iris[141:150,])
+
+
+
+
+predictqda_default$class
+predictqda$class
+
+
+# Q : ??? 
+predictqda_default$posterior
+predictqda$posterior
+
+
+
+
+
+```
+
+
+# Confusion matrix (K * K)
+
+
+```{r}
+set.seed(100)
+train_idx <- sample(nrow(iris), 90)
+train_set <- iris[train_idx, ]
+test_set <- iris[-train_idx, ]
+
+lda <- lda(Species ~., data = train_set)
+qda <- qda(Species ~., data = train_set)
+
+predlda <- predict(lda, test_set)
+predqda <- predict(qda, test_set)
+
+
+table(predlda$class, iris[-train_idx, 5])
+table(predqda$class, iris[-train_idx, 5])
+
+confusionMatrix(predlda$class, iris[-train_idx, 5])
+confusionMatrix(predqda$class, iris[-train_idx, 5])
+
+
+
+
+```
+
+
+# Multinomial Logistic Regression
+
+```{r}
+
+find_multinom_coef <- function(X , y){
+  Y <- dummy(y)
+  Y <- Y[,-1] 
+  n <- length(y)
+  p <- dim(X)[2]
+  K <- nlevels(y)
+  X <- as.matrix(cbind(1,X))
+  
+  #B <- matrix(0, p+1, K-1)
+
+  loglike <- function(B){
+    c <- 0
+    B <- matrix(B, ncol = K-1)
+    
+    for(i in 1:n){
+      a <- 0
+      b <- 0
+      
+      for(k in 1: (K-1)){
+        a <-  a + Y[i,k] *  as.numeric(X[i, ]  %*%  B[, k])
+        
+        b <- b + exp(as.numeric(X[i, ]  %*%  B[ ,k]))
+        
+      }
+      
+      c <- c + a - log(1 + b)
+      
+    }
+    
+    return(-c)
+  }
+  
+  optimed <- optim(matrix(0, p+1, K-1), fn = loglike, method="BFGS")
+  # optim function flattens the matrix arguments into vectors (columnwise)
+  
+  param = optimed$par
+  colnames(param) <-levels(y)[-1]
+
+  return(param) #   (p+1) * (K-1) 
+  
+}
+
+
+
+
+# Check
+# loglike(matrix(0, p+1, K-1))
+# n * log(K)
+
+
+
+find_multinom_coef(X=iris[1:140, 1:4], y=iris$Species[1:140])
+
+
+iris_multi <- multinom(Species ~ ., data=iris[1:140, ]) 
+# ignore the output here.
+
+t(coef(iris_multi))
+
+
+
+
+
+
+
+# betafun <- function(beta){     # input beta is vector
+#     
+#     c <- 0
+#     
+#     for(i in 1:n){
+#       jj <- 0
+#       a <- 0
+#       b <- c()
+#       
+#       for(k in 1:(K-1)){
+#         
+#         for(j in 1:(p+1)){
+#           jj <- jj+1
+#           a <- a + X[i,j] * beta[jj] 
+#           a
+#           
+#         }
+#         a <- a + a * Y[i,k]
+#         
+#       }
+#       a
+#       
+#       jj <- 0
+#       b <- rep(0, (K-1))
+#       
+#       for(k in 1: (K-1)){
+#         for(j in 1:(p+1)){
+#           jj <- jj + 1 
+#           
+#           b[k] <- b[k] + X[i,j] * beta[jj]
+#         }
+#         b[2]
+#         
+#       }
+#         
+#       b <- sum(exp(b))
+#       b <- b+1
+#       
+#       b <- log(b)
+#       
+#       
+#       c <- c + a - b
+#       
+#     }
+#     
+#     return(c)
+#     
+#   }
+#   
+# 
+# # Check
+# betafun(rep(0, (p+1) * (K-1)))
+# n * log(K)
+# 
+# optimed <- optim(rep(0, (p+1) * (K-1)), fn = betafun, method="BFGS",  control = list(fnscale = -1))
+# 
+# optimed$par
+
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+
+
+
+```{r}
+
+
+```
+
+

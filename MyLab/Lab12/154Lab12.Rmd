@@ -1,0 +1,334 @@
+---
+title: "154Lab12"
+author: "Jiyoon Clover Jeong"
+date: "11/18/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ISLR)
+library(tree)
+library(randomForest)
+library(ranger)
+library(caret)
+library(gbm)
+
+```
+
+
+```{r}
+
+attach(Carseats)
+High <- ifelse(Sales <= 8, "No", "Yes")
+carseats <- data.frame(Carseats, High)
+
+
+tree_carseats <- tree(High ~ .-Sales , data=carseats)
+
+tree_carseats
+
+```
+
+# Decision Trees
+
+```{r}
+
+summary(tree_carseats)
+plot(tree_carseats)
+text(tree_carseats, pretty=0)
+
+tree_carseats
+
+```
+
+
+
+
+# Random Forests
+
+
+```{r}
+set.seed(100)
+
+tree_carseats <- tree(High ~ .-Sales , data=carseats)
+
+a <- createDataPartition(carseats[, 1], p = 0.8)$Resample1
+train <- carseats[a, ]
+test <- carseats[-a, ] 
+
+
+random <- randomForest(High ~ . - Sales, data = train, importance=TRUE)
+
+random
+
+summary(random)
+
+
+
+tree.pred <- predict (random , newdata = test ,type ="class")
+tree.pred
+
+table <- table(tree.pred ,test$High)
+table
+
+
+
+# error rate
+(table[1,2] + table[2,1]) / (sum(table))
+
+
+
+#OOB Rate
+
+
+randomForest::importance(random)
+
+varImpPlot(random)
+
+
+
+
+```
+
+
+# Boosted Trees
+
+```{r}
+
+set.seed(100)
+
+n <- dim(carseats)[1]
+
+carseats$High <- as.numeric(carseats$High) -1
+
+head(carseats)
+
+
+train <- carseats[a, ]
+test <- carseats[-a, ] 
+
+boost <- gbm(High ~ . - Sales, train, distribution="bernoulli",n.trees=5000)
+
+yhat.boost <- predict(boost, newdata = test,n.trees =5000, type = "response")
+
+predicted <- ifelse(yhat.boost >= 0.5, 1, 0)
+
+mean(( predicted -test$High)^2)
+
+boost
+
+summary(boost)
+
+MSE <- c()
+
+
+for(i in 1:500){
+  yhat.boost <- predict(boost, newdata = test,n.trees =i * 10, type = "response")
+  predicted <- ifelse(yhat.boost >= 0.5, 1, 0)
+  MSE[i] <- mean(( predicted -test$High)^2)
+  
+}
+
+df <- data.frame(mse = MSE, B = seq(10,5000,10))
+
+ggplot(df, aes(x = B, y = mse)) + geom_point()
+
+
+MSE <- c()
+
+
+
+# d = 2 
+
+boost <- gbm(High ~ . - Sales, train, distribution="bernoulli",
+             n.trees=5000, interaction.depth = 2)
+
+for(i in 1:500){
+  yhat.boost <- predict(boost, newdata = test,n.trees =i * 10, type = "response")
+  predicted <- ifelse(yhat.boost >= 0.5, 1, 0)
+  MSE[i] <- mean(( predicted -test$High)^2)
+  
+}
+
+df <- data.frame(mse = MSE, B = seq(10,5000,10))
+
+ggplot(df, aes(x = B, y = mse)) + geom_point()
+
+
+# d = 3
+
+boost <- gbm(High ~ . - Sales, train, distribution="bernoulli",
+             n.trees=5000, interaction.depth = 3)
+
+for(i in 1:500){
+  yhat.boost <- predict(boost, newdata = test,n.trees =i * 10, type = "response")
+  predicted <- ifelse(yhat.boost >= 0.5, 1, 0)
+  MSE[i] <- mean(( predicted -test$High)^2)
+  
+}
+
+df <- data.frame(mse = MSE, B = seq(10,5000,10))
+
+ggplot(df, aes(x = B, y = mse)) + geom_point()
+
+
+# d = 4
+
+boost <- gbm(High ~ . - Sales, train, distribution="bernoulli",
+             n.trees=5000, interaction.depth = 4)
+
+for(i in 1:500){
+  yhat.boost <- predict(boost, newdata = test,n.trees =i * 10, type = "response")
+  predicted <- ifelse(yhat.boost >= 0.5, 1, 0)
+  MSE[i] <- mean(( predicted -test$High)^2)
+  
+}
+
+df <- data.frame(mse = MSE, B = seq(10,5000,10))
+
+ggplot(df, aes(x = B, y = mse)) + geom_point()
+
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+
+
+
+```{r}
+
+
+
+```
+

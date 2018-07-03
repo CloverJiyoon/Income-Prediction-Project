@@ -1,0 +1,520 @@
+---
+title: "154HW5"
+author: "Jiyoon Clover Jeong"
+date: "10/26/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(nnet)
+library(ggplot2)
+library(caret)
+
+```
+
+
+```{r}
+wine <- read.table("/Users/cloverjiyoon/2017Fall/Stat 154/data/wine.data.txt", sep = ",", header =  T)
+wine$class <- as.factor(wine$class)
+
+names(wine)
+
+
+```
+
+# 1) Sum-of-Squares Dispersion Functions (10 pts)
+
+
+```{r}
+
+tss <- function(x) {
+  
+  sum((x - mean(x))^2)
+}
+
+cat("TSS : ", tss(iris$Sepal.Length), "\n")
+
+
+
+bss <- function(x, y){
+  
+  
+  y <- as.factor(as.character(y))
+  
+  if(length(x) != length(y))
+    stop("x and y have different lengths")
+  
+  
+  sum <- 0
+  x_bar <-  mean(x)      #tss(x)
+  splited <- split(x, y)
+  
+  X_k <- sapply(splited, mean)
+  
+  for(i in 1: length(splited)){
+    sum <- sum + length(splited[[i]]) * (X_k[i] - x_bar)^2
+  }
+  
+  return(sum)
+  
+}
+
+cat("BSS : ", bss(iris$Sepal.Length, iris$Species), "\n")
+
+
+
+wss <- function(x,y){
+  
+  y <- as.factor(as.character(y))
+
+  if(length(x) != length(y))
+    stop("x and y have different lengths")
+
+  sum <- 0
+  x_bar <-  mean(x)      #tss(x)
+  splited <- split(x, y)
+  X_k <- sapply(splited, mean)
+
+  for(i in 1: length(splited)){
+    for(j in 1: length(splited[[i]])){
+       sum <- sum +  (splited[[i]][j] - X_k[i])^2
+    }
+   
+  }
+
+  return(sum)
+
+}
+
+
+cat("WSS : ", wss(iris$Sepal.Length, iris$Species), "\n")
+
+
+
+```
+
+# 2) Sum-of-Squares Ratio Functions (10 pts)
+
+```{r}
+
+cor_ratio <- function(x, y){
+  BSS <- bss(x,y)
+  TSS <- tss(x)
+  
+  cor <- BSS / TSS
+  return (as.numeric(cor))
+}
+
+cor_ratio(iris$Sepal.Length, iris$Species)
+
+
+F_ratio <- function(x,y){
+  
+  y <- as.factor(as.character(y))
+  BSS <- bss(x,y)
+  WSS <- wss(x,y)
+  
+  n <- length(x)
+  k <- nlevels(y)
+    
+  Fratio <- (BSS / (k - 1)) / (WSS / (n - k))
+  return(as.numeric(Fratio))
+}
+
+
+
+F_ratio(iris$Sepal.Length, iris$Species)
+
+
+```
+
+
+# 3) Discriminant Power of Predictors (30 pts)
+
+```{r}
+
+# The first approach consists of running simple logistic regressions
+# Q : For  number 3, consider only wine classes 1 and 2 (ignore class 3)
+
+predictors <- names(wine[1:130,-1])
+formula <- c("class ~")
+AIC <- data.frame(name = predictors, AIC = rep(0,13))
+
+for(i in 1: length(predictors)){
+  
+  formula <- paste("class ~", predictors[i])
+  #fit <- multinom(formula, data = wine[1:130,])
+  fit <- glm(formula, data = wine[1:130,] , family = binomial)
+  AIC[i,2] <- fit$aic
+  
+  
+}
+
+AIC
+
+AIC <- AIC[ order(AIC[,2]), ]
+
+AIC
+
+ggplot(AIC, aes( x = reorder(name, AIC), y =  AIC)) + geom_col() + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+
+
+
+# The second approach consists of computing correlation ratios
+
+corratio <- data.frame(name = predictors, cor_ratio = rep(0,13))
+
+for(i in 1:length(predictors)){
+  corratio[i,2] <- cor_ratio(wine[1:130,i+1], wine[1:130,1])
+}
+
+corratio
+
+corratio <- corratio[ order( corratio[,2]), ]
+
+corratio
+
+
+# Q : automatic ordering?? 
+#ggplot(corratio, aes(x = name, y = cor_ratio)) + geom_col()
+
+ggplot(corratio, aes(x = reorder(name, cor_ratio), y = cor_ratio)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+
+# Q : automatic ordering?? 
+#ggplot(corratio, aes(x = name, y = cor_ratio)) + geom_bar(stat = "identity")
+
+
+
+
+# The third approach consists of computing F-ratios
+
+Fratio <- data.frame(name = predictors, Fratio = rep(0,13))
+
+for(i in 1:length(predictors)){
+  Fratio[i,2] <- F_ratio(wine[1:130,i+1], wine[1:130,1])
+}
+
+Fratio
+
+Fratio <- Fratio[ order( Fratio[,2]), ]
+
+Fratio
+
+ggplot(Fratio, aes(x = reorder(name, Fratio), y = Fratio)) + geom_bar(stat = "identity") + theme(axis.text.x = element_text(angle = 60, hjust = 1))
+
+
+
+
+```
+
+
+# 4) Variance functions
+
+
+```{r}
+
+total_variance <- function(X){
+  X <- as.matrix(X)
+  X <- scale(X, scale = F)
+  n = dim(X)[1]
+  V <- (1/ (n-1)) * t(X) %*% X
+  return(V)
+  
+}
+
+# test total_variance()
+total_variance(iris[ ,1:4])
+
+# compare with var()
+var(iris[ ,1:4])
+
+
+
+# PPT 25- p64
+
+between_variance <- function(X, y){
+  
+  X <- scale(X, scale = F)
+  n <- length(y)
+  y <- as.data.frame( y)
+  Y <- model.matrix(~ y -1, data =  y)
+  BSS <- t(X) %*% Y %*% solve(t(Y) %*% Y)  %*% t(Y)  %*% X
+  B <- BSS / (n - 1)
+  
+  return(B)
+  
+}
+
+
+# test between_variance()
+between_variance(iris[ ,1:4], iris$Species)
+
+
+# PPT 25- p64
+
+within_variance <- function(X, y){
+  
+  # X <- as.data.frame(scale(X, scale =F))
+  # #X <- scale(X, scale = F)
+  # n <- dim(X)[1]
+  # p <- dim(X)[2]
+  # XX <- data.frame(X,y)
+  # X_k <-  split(X, y)
+  # GSS_k <- list()
+  # W_k <- list()
+  # W <- matrix(0, p, p)
+  # for(i in 1:nlevels(y)){
+  #   X_k[[i]] <- as.matrix(X_k[[i]])
+  #   GSS_k[[i]] <- t(X_k[[i]]) %*% X_k[[i]]
+  #   n_k <- dim(X_k[[i]])[1]
+  #   W_k <- (1 / (n_k -1)) *  GSS_k[[i]]
+  #   W <- W + ( (n_k - 1) / (n - 1)) * W_k
+  # }
+  
+  X <- scale(X, scale = F)
+  n <- length(y)
+  y <- as.data.frame(y)
+  Y <- model.matrix(~ y -1, data =  y)
+  WSS <- t(X) %*% (diag(n) - Y %*% solve(t(Y) %*% Y) %*% t(Y)) %*% X
+  W <- WSS / (n - 1)
+
+  
+  return(W)
+}
+
+
+# test within_variance()
+within_variance(iris[ ,1:4], iris$Species)
+
+
+
+# Confirm that V = B +W
+
+# confirm V = B + W
+Viris <- total_variance(iris[ ,1:4])
+Viris
+
+
+# B + W
+Biris <- between_variance(iris[ ,1:4], iris$Species)
+Wiris <- within_variance(iris[ ,1:4], iris$Species)
+Biris + Wiris
+
+
+
+```
+
+
+
+# Challenge
+
+## find the eigenvectors uk
+
+```{r}
+
+# find the eigenvectors uk
+
+X <- wine[,2:14]
+y <- as.factor(wine[,1])
+
+W <- within_variance(X, y)    # X should be dataframe
+
+K <- nlevels(y)
+J <- dim(X)[2]
+n <- dim(X)[1]
+
+splited <- split(X, y)
+
+C <- matrix(0, J, K)
+
+for(j in 1: J){
+  for(k in 1: K){
+    
+    n_k <- dim(splited[[k]])[1]
+    n_k
+    Xbar_jk <- mean(splited[[k]][, j])
+    Xbar_jk
+    Xbar_j <- mean(X[, j])
+    Xbar_j
+    C[j,k] <- sqrt(n_k / (n-1)) *  (Xbar_jk - Xbar_j)
+    C[j,k]
+    
+  }
+}
+
+C
+
+# check
+
+B <- between_variance(X,y)
+
+
+head(B,2)
+head(C %*% t(C), 2)
+
+dim(B)
+
+dim(C %*% t(C))
+
+
+eigen_w <- eigen( t(C) %*% solve(W) %*% C )$vectors
+
+eigen_values <- eigen( t(C) %*% solve(W) %*% C )$values
+
+eigen_values
+
+eigen_u <- solve(W) %*% C %*% eigen_w
+
+eigen_u
+
+
+
+
+```
+
+
+## Obtain the linear combinations zk and make a scatterplot of the wines
+
+```{r}
+
+X <- as.matrix(X)
+
+Z <- X %*% eigen_u
+head(Z)
+Z_splited <- split(as.data.frame(Z), y)
+
+
+# for(i in 1:nlevels(y)){
+#   z_k <- c(Z_splited[[1]][, i], Z_splited[[2]][ ,i],  Z_splited[[3]][ ,i])
+#   Z_k <- data.frame(z_k, y)
+#   print(ggplot(Z_k, aes(x = z_k, y = y, color = y)) + geom_point() +
+#           labs(title = paste0("linear combinations Z_", i), y = "class", color = "class"))       
+#   
+# }
+
+
+
+
+  z_k <- rbind(Z_splited[[1]][, 1:2], Z_splited[[2]][ ,1:2], 
+           Z_splited[[3]][ ,1:2])
+ 
+  Z_k <- data.frame(z_k, y)
+  print(ggplot(Z_k, aes(x = V1, y = V2, color = y)) + geom_point())   
+  
+  
+  
+
+
+```
+
+## scatterplot of the wines but this time using the first two principal components on the standardized predictors.
+
+```{r}
+
+X_scaled <- scale(X)
+
+score <-princomp(X_scaled, cor = TRUE)$score[,1:2]
+
+score[,1:2]
+
+
+n1 <- dim(Z_splited[[1]])[1]
+n2 <- dim(Z_splited[[2]])[1]
+
+
+score <- cbind(score, y = y)
+score
+
+
+ggplot(as.data.frame(score), aes(x = Comp.1, y = Comp.2, color = as.factor(y))) + geom_point()
+
+
+
+# for(i in 1:2){
+#   z_k <- c(Z_splited[[1]][, i], Z_splited[[2]][ ,i],  Z_splited[[3]][ ,i])
+#   Z_k <- data.frame(z_k, y)
+#   print(ggplot(Z_k, aes(x = z_k, y = y, color = y)) + geom_point() +
+#           labs(title = paste0("linear combinations Z_", i), y = "class", color = "class"))       
+#   
+# }
+
+
+
+```
+
+
+## Calculate the correlations between zk and the predictors
+
+```{r}
+
+# Q : Z with standardzied predictors or not??
+# Q : interpret score?
+
+cor(Z[,-3], X)
+
+
+
+```
+
+
+we can think 
+
+
+## Create a matrix of size n × K, with the squared Mahalanobis distances
+
+```{r}
+
+mahal <- matrix(0, n, K)
+
+X_splited <- split(as.data.frame(X), y)
+
+g_k <- lapply(X_splited, colMeans)
+
+
+W_inverse <- solve(W)
+
+for(i in 1:n){
+  for(j in 1:K){
+    mahal[i,j] <- (X[i, , drop = F] - g_k[[j]])  %*% W_inverse %*%
+      t(X[i, , drop = F] - g_k[[j]])
+  }
+}
+
+head(mahal)
+
+
+```
+
+
+### 1. assign each observation to the class Gk for which the Mahalanobis distance d^2(xi, gk) is the smallest
+
+```{r}
+
+
+assigned <- apply(mahal, 1, which.min)
+
+assigned
+
+```
+
+
+### 2. create a confussion matrix comparing the actual class versus the predicted class
+```{r}
+
+
+#data.frame(assigned, y)
+
+
+table(assigned, y)
+
+
+confusionMatrix(assigned, y)
+
+```
+

@@ -1,0 +1,333 @@
+---
+title: "Lab 6: Regression with Dimension Reduction Methods PCR and PLSR"
+author: "Prof. Gaston Sanchez"
+date: "Stat 154, Fall 2017"
+header-includes: 
+    \usepackage{tikz}
+    \usepackage{algpseudocode}
+    \usepackage{algorithmicx}
+output: pdf_document
+fontsize: 12pt
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+library(knitr)
+library(ISLR)
+library(pls)
+```
+
+```{r}
+read_chunk('lab06-pcr-pls-regression-chunks.R')
+```
+
+### Introduction
+
+In this lab, you are going to write R code to implement Principal Component 
+Regression (PCR), as well as Partial Least Squares Regression (PLSR). 
+You will also be using the data `Hitters` from the package `"ISLR"`. More
+specifically, you will sue `Salary` as the response variable, and the rest of the
+variables in `Hitters` as the predictors.
+
+
+## Data `Hitters`
+
+The data set `Hitters` is part of the R package `"ISLR"`.
+
+```{r data_hitters}
+```
+
+```{r str_hitters}
+```
+
+
+# Principal Components Regression (PCR)
+
+Principal Components Regression can be performed with the function `pcr()`
+which is part of the package `"pls"`. The code below computes PCR for the regression of 
+`Salary` on the rest of 19 predictors.
+
+```{r pcr_fit}
+```
+
+
+## 1) Start with PCA
+
+You are going write R code in order to replicate the results of `pcr()`.
+Follow the list of steps shown below:
+
+- Remove observations from `Hitters` that have missing values in `Salary`
+
+```{r na_omit}
+```
+
+- Use `model.matrix()` to create a design matrix based on the formula 
+`"Salary ~ ."`
+
+```{r model_matrix}
+```
+
+- Note that the generated model matrix includes a constant column for the 
+intercept term. Do not use this column.
+
+- The model matrix (without constant column) will be the matrix of responses.
+Standardize the model matrix of responses; this will be $\mathbf{X}$
+
+```{r predictors}
+```
+
+- The variable `Salary` will be the response $\mathbf{y}$
+
+```{r response}
+```
+
+- Use `svd()` to get the Singular Value Decomposition of 
+$\mathbf{X} = \mathbf{U D V^\mathsf{T}}$
+
+```{r svd}
+```
+
+- Compute principal components $\mathbf{Z}$ from the standardized model matrix 
+$\mathbf{X}$ and the eogenvectors in $\mathbf{V}$
+
+$$
+\mathbf{Z} = \mathbf{X V}
+$$
+
+```{r pc_components}
+```
+
+- Confirm that your principal components match those of `pcr_fit$scores`
+
+```{r comps_vs_scores}
+```
+
+
+## 2) PC Regression on the first component
+
+- Use the first PC$\mathbf{z_1}$ to compute the regression of $\mathbf{y}$ on 
+$\mathbf{z_1}$. That is, obtain the first PCR coefficient $b_1$ given by:
+
+$$
+b_1 =  (\mathbf{z_{1}^{\mathsf{T}} z_1})^{-1} \mathbf{z_{1}^{\mathsf{T}} y} 
+$$
+
+```{r pcreg_z1}
+```
+
+- Compute the vector of predicted values $\mathbf{\hat{y}}$:
+
+$$
+\mathbf{\hat{y}} = b_1 \mathbf{z_1}
+$$
+
+- Compare your computed $\mathbf{\hat{y}}$ against `pcr_fit$fitted.values[ , ,1]`, 
+which is the fitted response using PC1 provided by `pcr()`. Add the average of $y$ to your predicted value before comparison. 
+
+```{r fitted_pcr1}
+```
+
+
+## 3) PC Regression on all PCs
+
+- Compute the vector of PCR-coefficients $\mathbf{b}_{pcr}$ by regressing 
+$\mathbf{y}$ on all principal components $\mathbf{Z}$:
+
+$$
+\mathbf{b}_{pcr} = (\mathbf{Z^\mathsf{T} Z})^{-1} \mathbf{Z^\mathsf{T} y}
+$$
+```{r pcreg_all, echo = FALSE}
+```
+
+- Compute the vector of predicted values $\mathbf{\hat{y}}$ using all PCs:
+
+\begin{align*}
+\mathbf{\hat{y}} &= \mathbf{Z} (\mathbf{Z^\mathsf{T} Z})^{-1} \mathbf{Z^\mathsf{T} y} \\
+\mathbf{\hat{y}} &= \mathbf{Z} \mathbf{b}_{pcr}
+\end{align*}
+
+- Compare your computed $\mathbf{\hat{y}}$ against `pcr_fit$fitted.values[ , ,19]` 
+and confirm that you have the same results as `pcr()`. Add the average of $y$ to your predicted value before comparison. 
+
+```{r fitted_all}
+```
+
+
+## 4) PCR coefficients in terms of the predictor variables
+
+`pcr()` returns regression coefficients---in terms of the predictors---for 
+all possible regressions: with one PC, two PCs, three PCs, and so on, until 
+the regression that uses all 19 PCs.
+
+Consider the PC regression on the first PC $\mathbf{z_1}$. The PCR-coefficient is:
+$$
+b_1 = (\mathbf{z_{1}^{\mathsf{T}} z_1})^{-1} \mathbf{z_{1}^{\mathsf{T}} y} 
+$$
+
+and the fitted $\mathbf{\hat{y}}$ is:
+$$
+\mathbf{\hat{y}} = b_1 \mathbf{z_1}
+$$
+
+You can re-write the regression of PC1 in terms of the response variables as:
+\begin{align*}
+\mathbf{\hat{y}} &= b_1 \mathbf{z_1} \\
+ &= b_1 \mathbf{X v_1} \\
+ &= \mathbf{X} (b_1 \mathbf{v_1}) \\
+ &= \mathbf{X} \mathbf{b_{1}^{*}}
+\end{align*}
+
+where:
+
+- $\mathbf{v_1}$ is the loading associated to the first PC, that is, the
+first column of $\mathbf{V}$
+- $\mathbf{b_{1}^{*}}$ is a vector of regression coefficients in terms of 
+the predictors
+
+In general, the PC regression coefficients can be expressed in terms of the 
+predictors as:
+$$
+\mathbf{b_{k}^{*}} = \mathbf{V_{k} D_{k}^{-1} U_{k}^{\mathsf{T}} y}
+$$
+
+where the index $k$ indicates matrices associated to the first $k$ components. More specifically, $V_k$ is a matrix of the first $k$ columns of $V$, $U_k$ is a matrix of the first $k$ columns of $U$, and $D_k$ is a $k \times k$ diagonal matrix.
+
+
+### Your turn:
+
+- Take your previously computed coefficient $b_1$ and calculate the associated
+vector of coefficients $\mathbf{b_{1}^{*}} = b_1 \mathbf{v_1}$. Confirm that your 
+vector $\mathbf{b_{1}^{*}}$ matches that of 
+`pcr_fit$coefficients[ , , 1]`
+
+```{r b1_pcr}
+```
+
+- Do the same for all possible sets of PCs, and verify your coefficients against
+the output of `pcr_fit$coefficients`.
+
+```{r all_pcr_coeffs}
+```
+
+\bigskip
+
+_The lab continues on the next page._
+
+
+-----
+
+\newpage
+
+# Partial Least Squares Regression
+
+Below are the steps of the PLSR algorithm (in its "classic" version).
+Assume that the predictors in $\mathbf{X}$ and the response $\mathbf{y}$ are 
+standardized: mean = 0, variance 1.
+
+\bigskip
+
+\begin{algorithmic}
+\State Set $\mathbf{X_0 = X}$ and $\mathbf{y_0 = y}$
+\For{$h = 1, 2, \dots, r$}
+	\State $\mathbf{w_h = X_{h-1}^{\mathsf{T}} y_{h-1}}$
+	\State normalize weights: $\| \mathbf{w_h} \| = 1$
+	\State $\mathbf{z_h = X_{h-1} w_h / w_{h}^{\mathsf{T}} w_h}$
+	\State $\mathbf{p_h = X_{h-1}^{\mathsf{T}} z_h / z_{h}^{\mathsf{T}} z_h}$
+	\State $\mathbf{X_h = X_{h-1} - z_h p_{h}^{\mathsf{T}}}$ 
+	\State $b_h = \mathbf{y_{h - 1}^{\mathsf{T}} z_h / z_{h}^{\mathsf{T}} z_h}$
+	\State $\mathbf{y_h = y_{h-1}} - b_h \mathbf{z_h}$ 
+\EndFor
+\end{algorithmic}
+
+where $r$ is the rank of $\mathbf{X}$
+
+\bigskip
+
+Your mission is to write R code that carries out PLS regression according to 
+the steps shown above. Your code should contain the following objects:
+
+- `components`: matrix of PLS components $\mathbf{Z}$
+- `weights`: matrix of weights $\mathbf{W}$
+- `loadings`: matrix of loadings $\mathbf{P}$
+- `coefficients`: vector of regression coefficients $\mathbf{b}$
+- `fitted`: matrix of fitted (predicted) values $\mathbf{\hat{Y}}$
+
+
+The first steps are the same as with PCR:
+
+- Remove observations from `Hitters` that have missing values in `Salary`
+- Use `model.matrix()` to create a design matrix based on the formula 
+`"Salary ~ ."`
+- Note that the generated model matrix includes a constant column for the 
+intercept term. Do not use this column.
+- The model matrix (without constant column) will be the matrix of responses.
+- Standardize the model matrix of responses; this will be $\mathbf{X}$
+- The response `Salary` will be $\mathbf{y}$
+
+
+### Check your first PLS component
+
+- Calculate $\mathbf{w_1}, \mathbf{z_1}$, and $\mathbf{p_1}$
+- Compare your results with `pls_fit$loading.weights[,1]`, `pls_fit$scores[,1]`, `pls_fit$loadings[,1]`, 
+- Compare the first fitted $\mathbf{\hat{y}}$, i.e. regressing $\mathbf{y}$ on 
+the first PLS component $\mathbf{z_1}$, and compare it with 
+`pls_fit$fitted.values[,,1]`
+
+```{r}
+pls_fit <- plsr(Salary ~ ., data = Hitters, scale = TRUE, validation = "none")
+
+pls_regression <- function(X, y) {
+  # Assume X is standardized.
+  
+  n <- nrow(X)
+  p <- ncol(X)
+  r <- qr(X)$rank
+  Z <- matrix(0, nrow=n, ncol=r)
+  W <- matrix(NA, nrow=p, ncol=r)
+  P <- matrix(NA, nrow=p, ncol=r)
+  b <- rep(0, r)
+  Yhat <- matrix(mean(y), nrow=n, ncol=r)
+  
+  for (h in 1:r) {
+    W[, h] <- t(X) %*% y
+    W[, h] <- W[, h] / sqrt(sum(W[, h]^2))
+    Z[, h] <- X %*% W[, h]
+    P[, h] <- t(X) %*% Z[, h] / sum(Z[, h]^2)
+    X <- X - Z[, h] %*% t(P[, h])
+    b[h] <- sum(y * Z[, h]) / sum(Z[, h]^2)
+    y <- y - b[h] * Z[, h]
+    Yhat[, h] <- Yhat [, h] + Z[, 1:h, drop=FALSE] %*% b[1:h]
+  }
+  
+  list(components=Z, weights=W, loadings=P, 
+       coefficients=b, fitted=Yhat)
+}
+
+my_pls <- pls_regression(X, y)
+
+# Check if the loading weights match.
+sapply(1:qr(X)$rank, function(j) {
+  all(abs(my_pls$weights[, j] - pls_fit$loading.weights[, j]) < 1e-6)
+})
+head(cbind(my_pls$weights[, 1], pls_fit$loading.weights[, 1]))
+
+# Check if the scores match.
+sapply(1:qr(X)$rank, function(j) {
+  all(abs(my_pls$components[, j] - pls_fit$scores[, j]) < 1e-6)
+})
+head(cbind(my_pls$components[, 1], pls_fit$scores[, 1]))
+
+# Check if the loadings match.
+sapply(1:qr(X)$rank, function(j) {
+  all(abs(my_pls$loadings[, j] - pls_fit$loadings[, j]) < 1e-6)
+})
+head(cbind(my_pls$loadings[, 1], pls_fit$loadings[, 1]))
+
+# Check if the fitted values match.
+sapply(1:qr(X)$rank, function(j) {
+  all(abs(my_pls$fitted[, j] - as.vector(pls_fit$fitted.values[,,j])) < 1e-6)
+})
+head(cbind(my_pls$fitted[, 1], as.vector(pls_fit$fitted.values[,,1])))
+
+```

@@ -1,0 +1,208 @@
+---
+title: "Analysis-bagged(More_than_a_corgi_club)"
+author: "Jiyoon Clover Jeong"
+date: "11/29/2017"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rpart) #decision tree
+library(rpart.plot) # plotting decision tree
+library(mlr, warn.conflicts = T) #missing values imputation
+library(missForest, warn.conflicts = T) #missing values imputation
+library(mi, warn.conflicts = T) #missing values imputation
+library(mice, warn.conflicts = T) #missing values imputation
+library(VIM) #finding patterns of missing values
+library(Hmisc) #missing values imputation
+library(lattice)
+library(arules) #discretize
+library(lme4) #dummfiy
+library(tree)
+library(caret)
+library(ROCR, warn.conflicts = T) # ROC curve
+library(pROC, warn.conflicts = T) # Get the optimal threshold
+library(randomForest)
+library(dplyr)
+options(scipen=999) #get rid of scientific notation 
+
+
+newtrain2 <- read.csv("../data/cleandata/newtrain2.csv", header = T)
+newtest2 <- read.csv("../data/cleandata/newtest2.csv", header = T)
+str(newtrain2)
+str(newtest2)
+
+```
+
+
+
+#Bagged Tree - simply a special case of a random forest with m = p.
+
+## Train and tune a Random Forest classifier 
+```{r}
+set.seed(100)
+
+#=============================================================
+
+
+
+#Create a task
+traintask <- makeClassifTask(data = newtrain2, target = "income", positive = ">50K")
+testtask <- makeClassifTask(data = newtest2, target = "income", positive = ">50K")
+
+#Brief view of trainTask
+traintask
+
+#For deeper View
+str(getTaskData(traintask))
+
+
+#Create a bagging learner
+bagged <- makeLearner("classif.rpart",  parms = list(split = "gini"),
+                      predict.type = "response")
+
+#Set up the bagging algorithm which will grow 100 trees on randomized samples of data with replacement.
+
+bag <- makeBaggingWrapper(learner = bagged, bw.iters = 100, bw.replace = TRUE)
+# Q  :  bw.iters [integer(1)] Iterations = number of fitted models in bagging. Default is 10
+
+
+#To check the performance, set up a validation strategy
+#set 5 fold cross validation
+rdesc <- makeResampleDesc("CV", iters = 3L)
+
+# With 100 trees, bagging has returned an accuracy of 84.5%
+r <- resample(learner = bag , task = traintask, resampling = rdesc, 
+              measures = list(tpr, fpr, fnr, tnr, acc), show.info = T)
+
+#Show true positive rate, false positive rate, false negative rate, false positive rate, and accuracy rate from bagged model
+r
+#Aggr. Result: tpr.test.mean=0.514,fpr.test.mean=0.0554,fnr.test.mean=0.486,tnr.test.mean=0.945,acc.test.mean=0.843
+
+
+
+
+#=============================================================
+
+
+
+#Make a random forest learner
+rf <- makeLearner("classif.randomForest", predict.type = "response",
+                  par.vals = list(ntree = 50L, importance = TRUE))
+
+r2 <- resample(learner = rf, task = traintask, resampling = rdesc, 
+               measures = list(tpr,fpr,fnr,tnr,acc), show.info = TRUE)
+
+#Show true positive rate, false positive rate, false negative rate, false positive rate, and accuracy rate from random forest model
+r2
+#Aggr. Result: tpr.test.mean=0.623,fpr.test.mean=0.0598,fnr.test.mean=0.377,tnr.test.mean=0.94,acc.test.mean=0.865
+
+
+
+#Internally, random forest uses a cutoff of 0.5  --> 
+#if a particular unseen observation has a probability higher than 0.5, it will be classified as >50K.
+#In random forest, we have the option to customize the internal cutoff. As the false negative rate is very high now, we'll increase the cutoff for negative classes (<=50K) and accordingly reduce it for positive classes (>50K). Then, train the model again.
+
+
+#Evaluating by using new cutoff
+rf$par.vals <- list(ntree = 50L, importance = TRUE, cutoff = c(0.53, 0.47))
+r3 <- resample(learner = rf, task = traintask, resampling = rdesc, 
+              measures = list(tpr,fpr,fnr,tnr,acc), show.info = TRUE)
+#Show true positive rate, false positive rate, false negative rate, false positive rate, and accuracy rate from random forest model
+r3
+#Aggr. Result: tpr.test.mean=0.651,fpr.test.mean=0.0683,fnr.test.mean=0.349,tnr.test.mean=0.932,acc.test.mean=0.865    ---> we can see that false negative rate is decreased even though the accuracy rate stays the same. I have tried cutoff = c(0.6, 0.4), cutoff = c(0.7, 0.3) but they all gave lower accuracy late.
+
+
+
+#Random Forest tuning
+
+getParamSet(rf)
+
+#Specifying the search space for hyperparameters
+rf_params <- makeParamSet(makeIntegerParam("mtry", lower = 2, upper = 10),
+                       makeIntegerParam("nodesize", lower = 10, upper = 50),
+                       makeIntegerParam("ntree",lower = 3, upper = 100)
+                       )
+
+
+
+#Set validation strategy
+rdesc <- makeResampleDesc("CV", iters=3L)
+
+#Set optimization technique
+rf_ctrl <- makeTuneControlRandom(maxit = 5L)
+
+#Start Hypertuning the parameters
+rf_tune <- tuneParams(learner = rf, task = traintask, resampling = rdesc,
+                   measures = list(acc), par.set = rf_params,
+                   control = rf_ctrl, show.info = TRUE)
+
+
+
+#Optimal hypertuned parameters
+rf_tune$x
+
+
+#Accuracy rate from Cross Validation
+rf_tune$y
+
+
+#Use hyperparameters for modeling
+rf_tree <- setHyperPars(rf, par.vals = rf_tune$x)
+
+#Train a model
+rforest <- mlr::train(rf_tree, traintask)
+getLearnerModel(rforest)
+
+
+#***Make plots for random forest model
+
+
+#Variable importance statistics
+varImpPlot(rforest$learner.model)
+importance(rforest$learner.model)
+```
+
+
+```{r}
+
+# ** Plot random forest tree
+
+
+# ** Make predictions on training dataset
+rfclass1 <- predict(rforest, traintask)
+
+#Confusion matrix on training dataset
+confusionMatrix(rfclass1$data$response, rfclass1$data$truth)
+
+#Make random forest plots on training dataset
+plot(rfclass1$data$response, newtrain2$income)
+abline (0,1)
+
+#Training accuracy rate
+1 - mean(rfclass1$data$response != newtrain2$income)
+
+
+
+#Make predictions on test dataset
+rfclass2 <- predict(rforest, testtask)
+
+#Confusion matrix on test dataset
+confusionMatrix(rfclass2$data$response, rfclass2$data$truth)
+
+#Make random forest plots on test dataset
+plot(rfclass2$data$response, newtest2$income)
+abline (0,1)
+
+#Test accuracy rate
+1 - mean(rfclass2$data$response != newtest2$income)
+
+
+
+
+
+```
+
+
+

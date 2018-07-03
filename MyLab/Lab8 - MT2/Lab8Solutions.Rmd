@@ -1,0 +1,407 @@
+---
+title: 'Lab 8: Logistic Regression'
+author: "Gaston Sanchez"
+date: "Stat 154, Fall 2017"
+output: pdf_document
+fontsize: 12pt
+urlcolor: blue
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, error = TRUE)
+library(knitr)
+library(ISLR)
+library(FactoMineR)
+library(ggplot2)
+```
+
+# The `Default` Data Set
+
+Consider the `Default` data set that comes in the R package `"ISLR"`. We are 
+interested in predicting whether an individual will default on his or her 
+credit card payment, on the basis of annual income and monthly credit card 
+balance.
+
+```{r Default}
+# remember to load package ISLR!
+names(Default)
+dim(Default)
+summary(Default)
+```
+
+```{r}
+summary(subset(Default, default == 'Yes'))
+
+summary(subset(Default, default == 'No'))
+```
+
+\bigskip
+
+Begin with some exploratory displays of the data. You can start with a 
+scatterplot of `balance` and `income`, distinguishing observations based on 
+`default`, like in the image below
+
+```{r balance_income_scatter, echo = FALSE, fig.align='center', fig.width=5.5, fig.height=3.5}
+ggplot(data = Default, aes(x = balance, y = income, color = default)) +
+  geom_point(alpha = 0.5, size = 1) +
+  ggtitle("Scatterplot between Balance and Income")
+```
+
+\bigskip
+
+Make density plots of `balance` and `income`, for instance:
+
+```{r balance_density, echo = FALSE, fig.align='center', fig.width=5, fig.height=3}
+ggplot(data = Default, aes(x = balance, color = default)) +
+  geom_density(aes(fill = default), alpha = 0.5) +
+  ggtitle("Kernel Density of Balance (by default)")
+```
+
+\bigskip
+
+```{r income_density, echo = FALSE, fig.align='center', fig.width=5, fig.height=3}
+ggplot(data = Default, aes(x = income, color = default)) +
+  geom_density(aes(fill = default), alpha = 0.5) +
+  ggtitle("Kernel Density of Income (by default)")
+```
+
+\bigskip
+
+### OLS Regression
+
+Out of curiosity, let's fit an OLS model by regressing `default` on `balance`.
+Because `default` is a factor, you should create a numeric _default_ vector:
+
+```{r}
+# code default as numeric
+default_numeric <- rep(0, nrow(Default))
+default_numeric[Default$default == 'Yes'] <- 1
+Default$default_num <- default_numeric
+
+ols_reg <- lm(default_num ~ balance, data = Default)
+summary(ols_reg)
+```
+
+\bigskip
+
+```{r ols_line, echo = FALSE, fig.align='center', fig.width=6, fig.height=3}
+# scatterplot with ols regression line
+ggplot(data = Default, aes(x = balance, y = default_num)) +
+  geom_point(aes(color = default)) + 
+  geom_smooth(method = lm) +
+  ggtitle("Scatterplot with OLS regression line")
+```
+
+
+## Logistic Regression
+
+The response `default` falls into one of two categories: `"Yes"` or `"No"`. 
+Rather than modeling `default` directly, logistic regression models the
+probability that the response $Y$ belongs to a particular category.
+
+The probability of default given `balance` can be written as:
+$$
+Pr(\texttt{default} = \texttt{Yes|balance})
+$$
+
+To fit a logistic regression model you use the function `glm()`. The syntax of 
+`glm()` is similar to that of `lm()`, except you must specify the argument 
+`family = binomial` in order to tell R to run a logistic regression rather than
+some other type of generalized linear model.
+
+Notice that `glm()` knows how to handle the response `default` which is a factor:
+
+```{r}
+logreg_default <- glm(default ~ balance, family = binomial, data = Default)
+
+summary(logreg_default)$coefficients
+```
+
+\bigskip
+
+How do we interpret the coefficients? A one-unit increase in `balance` is 
+associated with an increase in the log odds of `default` by 
+`r sprintf('%0.3f', logreg_default$coefficients[2])` units.
+
+Many aspects of the logistic regression output shown in the `summary()` are
+similar to the `lm()` output. For example, you can measure the accuracy of the
+coefficient estimates by computing their standard errors.
+
+To make predictions we can use the coefficient estimates. For instance, the 
+predicted default probability for an individual with a `balance` of $1,000 is:
+
+$$
+\hat{p}(X) = \frac{e^{\hat{\beta}_0 + \hat{\beta}_1X}}{1 + e^{\hat{\beta}_0 + \hat{\beta}_1X}} = \frac{e^{-10.6513 + 0.0055 \times 1000}}{1 + e^{-10.6513 + 0.0055 \times 1000}} = 0.00576
+$$
+
+which is below 1%. In contrast, the predicted probability of default for an 
+individual with a balance of $2,000 is 0.586 or 58.6%.
+
+### Your turn
+
+- Find out how to use `predict()` to obtain the probability of 
+default for individuals with `balance` values of \$100, \$200, \$300, 
+$\dots$, \$2,000
+
+```{r}
+# indirect way
+b <- predict(logreg_default, data.frame(balance = seq(100, 2000, by = 100)))
+exp(b) / (1 + exp(b))
+
+# direct way
+predict(logreg_default, data.frame(balance = seq(100, 2000, by = 100)), 
+        type = "response")
+```
+
+- Fit another logistic regerssion model by regressing `default` on `student`.
+How would you interpret the coefficient estimate?
+
+- Fit a third logistic regression by regressing `default` on `balance`, 
+`student`, and `income`. 
+- Are all coefficient estimates significant?
+- How would you explain the apparent contradiction between the opposite signs
+of the `student` coefficients (this regression versus the previous one)?
+- Answer to these questions are in pages 134-137 of ISL.
+
+
+-----
+
+# The Stock Market `Smarket` Data
+
+You will be working with the `Smarket` data, which is part of the `"ISLR"`
+package. This data consists of percentage returns fro the S&P 500 stock index
+over 1,250 days, from the beginning of 2001 until the end of 2005. For each 
+date, the percentage returns for each of the five previous tradings has been
+records, `Lag1` through `Lag5`. Other variables are:
+
+- `Volume` = the number of shares traded on the prevous day, in billions
+- `Today` = the percentage return on the data in question
+- `Direction` = whether the market was `Up` or `Down` on this date
+
+```{r Smarket}
+# remember to load package ISLR
+names(Smarket)
+dim(Smarket)
+summary(Smarket)
+```
+
+- Compute the matrix of correlations of the variables in `Smarket`, excluding
+the variable `Direction`
+
+```{r}
+cor(Smarket[ ,-9])
+```
+
+- Perform a PCA on `Smarket[ ,-9]` to get a visual display of the variables.
+You can accomplish this with the function `PCA()` from the `"FactoMineR"` package. By default, it plots a _circle of correlations_
+
+```{r}
+pca <- PCA(Smarket[ ,-9], graph = FALSE)
+```
+
+- How correlated are the lag variables with today's returns? Are previous day's
+returns highly correlated with today's returns?
+
+- Make a scatterplot of `Year` and `Volume`
+
+```{r}
+with(Smarket, plot(Year, Volume))
+lines(lowess(Smarket$Year, Smarket$Volume))
+```
+
+
+## Logistic Regression
+
+Use the `glm()` function to fit a logistic regression model in order to predict 
+`Direction` using `Lag1` through `Lag5` and `Volume`.
+
+```{r}
+log_reg <- glm(Direction ~ Lag1 + Lag2 + Lag3 + Lag4 + Lag5 + Volume, 
+    family = binomial, data = Smarket)
+
+log_reg
+```
+
+- Inspect the `summary()` of the `"glm"` object containing the output of the
+logistic regression.
+
+- Looking at the p-values of the regression coefficients, which coefficient
+seems to be significant?
+
+- What is the coefficient value of `Lag1`? How would you interpret the sign
+of this coefficient?
+
+- Use the `predict()` function to predict the probability that the market will
+go up, given values of the predictors. Use the argument `type = "response"`
+which tells R to output probabilities of the form $P(Y = 1 | X)$, as oppose
+to other information such as the logit. The first 10 probabilities look like
+this:
+
+```{r}
+probs <- predict(log_reg, type = "response")
+head(probs, 10)
+```
+
+
+-----
+
+
+# Estimation of Parameters
+
+In this part of the lab, your mission is to implement code in R that allows 
+you to estimate the logistic regression coefficients.  
+
+The estimation of the coefficients is carried out by Maximum Likelihood.
+Consider, for instance, a logistic model with one predictor and one response.
+We look for $\hat{\beta}_0$ and $\hat{\beta}_1$ that maximize the 
+log-likelihood $l(\hat{\beta}_0, \hat{\beta}_1)$. 
+To do so, we set the first order partial derivatives 
+of $l(\boldsymbol{\beta})$ to zero.
+
+\begin{align*}
+\frac{\partial l(\boldsymbol{\beta})}{\partial \beta_0} &= \sum_{i=1}^{n} (y_i - p(x_i)) = 0 \\
+\frac{\partial l(\boldsymbol{\beta})}{\partial \beta_1} &= \sum_{i=1}^{n} x_i (y_i - p(x_i)) = 0
+\end{align*}
+
+Unfortunately, there is no analytical solution to this problem. So how do 
+you actually compute the estimates? Using the Newton-Raphson algorithm.
+
+- Let $\mathbf{y}$ be the column vector of response $Y$
+- Let $\mathbf{X}$ be the $n \times (p+1)$ input (design) matrix
+- Let $\mathbf{p}$ be the $n$-vector of fitted probabilities with the 
+  $i$-th element $p(x_i; \beta^{old})$
+- Let $\mathbf{W}$ be an $n \times n$ diagonal matrix of weights with 
+  $i$-th element $p(x_i; \beta^{old}) (1 - p(x_i;\beta^{old}))$
+
+Then:
+\begin{align*}
+  \frac{\partial l(\boldsymbol{\beta})}{\partial \boldsymbol{\beta}} &= \mathbf{X^\mathsf{T} (y - p)} \\
+  \frac{\partial^2 l(\boldsymbol{\beta})}{\partial \boldsymbol{\beta} \partial \boldsymbol{\beta}^\mathsf{T}} &= - \mathbf{X^\mathsf{T} W X}
+\end{align*}
+
+
+## Newton-Raphson algorithm
+
+Here's the pseudo-code to obtain the estimate coefficients.
+
+\begin{enumerate}
+  \item $\mathbf{b^{old}} \longleftarrow \mathbf{0}$
+  \item Compute $\mathbf{p}$ by setting its elements to:
+  $$
+  p(x_i) = \frac{e^{\mathbf{x_{i}^\mathsf{T} b^{old}}}}{1 + e^{\mathbf{x_{i}^\mathsf{T} b^{old}}}}
+  $$
+  \item Compute the diagonal matrix $\mathbf{W}$ with the $i$-th diagonal element:
+  $p(x_i) (1 - p(x_i)), \quad i = 1, \dots, n$
+  \item $\mathbf{z} \longleftarrow \mathbf{Xb^{old} + W^{-1} (y - p)}$
+  \item $\mathbf{b^{new}} \longleftarrow \mathbf{(X^\mathsf{T} W X)^{-1} X^\mathsf{T} Wz}$
+  \item Check whether $\mathbf{b^{old}}$ and $\mathbf{b^{new}}$ are close ``enough'',
+  otherwise update $\mathbf{b^{old}} \leftarrow \mathbf{b^{new}}$, and go back to step 2.
+\end{enumerate}
+
+\bigskip
+
+__Your turn__: Write code in R for the algorithm described above. Use the 
+`Lag` variables and `Volume` as predictors, and `Direction` as response.
+You will have to convert `Direction` into a numeric vector by coverting
+`'Up'` to `1` and `'Down'` to `0`.
+
+```{r}
+# predictors
+preds <- c('Lag1', 'Lag2', 'Lag3', 'Lag4', 'Lag5', 'Volume')
+
+# IRLS algorithm
+n <- nrow(Smarket)
+X <- as.matrix(cbind(Intercept = rep(1, n), Smarket[ ,preds]))
+p <- ncol(X)
+y <- rep(0, n)
+y[Smarket$Direction == 'Up'] <- 1
+
+# start from scratch
+b_old <- rep(0, p)
+maxiter <- 100
+eps <- 1
+iter <- 0
+
+while ((eps > 0.0001) | (iter == maxiter)) {
+  # probabilities
+  Xb <- as.vector(X %*% b_old)
+  exb <- exp(Xb)
+  probs <- exb / (1 + exb)
+  
+  # matrix W
+  W <- diag(probs * (1 - probs), nrow = n, ncol = n)
+
+  z <- X %*% b_old + solve(W) %*% (y - probs)
+  b_new <- solve(t(X) %*% W %*% X) %*% t(X) %*% W %*% z
+  b_diff <- abs(b_new - b_old)
+  eps <- sum(b_diff)
+  iter <- iter + 1
+  b_old <- b_new
+}
+
+# compare with glm() output
+cbind(b_new, log_reg$coefficients)
+```
+
+
+\bigskip
+
+## Simplified Algorithm
+
+Since $\mathbf{W}$ is an $n \times n$ diagonal matrix, direct matrix operations 
+with it may be very inefficient. A modified pseudo code is provided next.
+
+\begin{enumerate}
+  \item $\mathbf{b^{old}} \longleftarrow \mathbf{0}$
+  \item Compute $\mathbf{p}$ by setting its elements to:
+  $$
+  p(x_i) = \frac{e^{\mathbf{x_{i}^\mathsf{T} b^{old}}}}{1 + e^{\mathbf{x_{i}^\mathsf{T} b^{old}}}}
+  $$
+  \item Compute the $n \times (p+1)$ matrix $\mathbf{\tilde{X}}$ by multiplying the
+  $i$-th row of matrix $\mathbf{X}$ by $p(x_i) (1 - p(x_i)), \quad i = 1, \dots, n$
+  \item $\mathbf{b^{new}} \longleftarrow \mathbf{b^{old} + (X^\mathsf{T} \tilde{X})^{-1} X^\mathsf{T} (y - p)}$
+  \item Check whether $\mathbf{b^{old}}$ and $\mathbf{b^{new}}$ are close ``enough'',
+  otherwise update $\mathbf{b^{old}} \leftarrow \mathbf{b^{new}}$, and go back to step 2.
+\end{enumerate}
+
+\bigskip
+
+__Your turn__: Write code in R for the simplified algorithm described above. 
+Use the `Lag` variables and `Volume` as predictors, and `Direction` as response.
+You will have to convert `Direction` into a numeric vector by coverting
+`'Up'` to `1` and `'Down'` to `0`.
+
+
+```{r}
+# IRLS algorithm
+n <- nrow(Smarket)
+X <- as.matrix(cbind(Intercept = rep(1, n), Smarket[ ,preds]))
+p <- ncol(X)
+y <- rep(0, n)
+y[Smarket$Direction == 'Up'] <- 1
+
+# start from scratch
+b_old <- rep(0, p)
+maxiter <- 100
+eps <- 1
+iter <- 0
+
+while ((eps > 0.0001) | (iter == maxiter)) {
+  # probabilities
+  Xb <- as.vector(X %*% b_old)
+  exb <- exp(Xb)
+  probs <- exb / (1 + exb)
+  
+  # matrix W
+  W <- probs * (1 - probs)
+  X_tilde <- sweep(X, 1, W, FUN = "*")
+  b_new <- b_old + solve(t(X) %*% X_tilde) %*% t(X) %*% (y - probs)
+  b_diff <- abs(b_new - b_old)
+  eps <- sum(b_diff)
+  iter <- iter + 1
+  b_old <- b_new
+}
+
+# compare with glm() output
+cbind(b_new, log_reg$coefficients)
+```

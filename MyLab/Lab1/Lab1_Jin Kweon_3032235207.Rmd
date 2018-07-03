@@ -1,0 +1,332 @@
+---
+title: "Lab1 - Jin Kweon (3032235207)"
+author: "Jin Kweon"
+date: "8/26/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r for_fun}
+#matrix -> rows = number of objects/observations & cols = number of features/variables 
+
+"+"(2,3) #fancy version of summation 
+apropos("log") #list out all the functions that include "log"
+
+```
+
+```{r section1}
+x <- 1:9 #vector
+mat_x <- matrix(x, 3, 3) #by column
+mat_x2 <- matrix(x, 3, 3, byrow = T) #by row
+
+diag(5) #Create an 5*5 identity matrix
+
+
+
+
+#create three vectors and combine it together to form a matrix.
+a1 <- c(2, 3, 6, 7, 10)
+a2 <- c(1.88, 2.05, 1.70, 1.60, 1.78)
+a3 <- c(80, 90, 70, 50, 75)
+
+A <- cbind(a1, a2, a3)
+
+
+
+
+#create three vectors and combine it together to form a matrix.
+b1 <- c(1, 4, 5, 8, 9)
+b2 <- c(1.22, 1.05, 3.60, 0.40, 2.54)
+b3 <- c(20, 40, 30, 80, 100)
+
+B <- rbind(b1, b2, b3)
+
+
+
+
+
+# matrix multiplication 
+A %*% B
+B %*% A
+t(A) %*% t(B)
+#t(B) %*% crossprod(A, B) #Not computable!!!
+
+
+
+
+#Play around with the R-embedded data, iris.
+iris
+summary(iris)
+dim(iris)
+head(iris)
+
+lincomb <- as.matrix(iris[1:4]) %*% c(1:4) 
+
+lincomb2 <- (1 * diag(150) %*% iris$Sepal.Length) + (2 * diag(150) %*% iris$Sepal.Width) + (3 * diag(150) %*% iris$Petal.Length) + (4 * diag(150) %*% iris$Petal.Width) #another way to solve it.
+
+
+
+
+# Check out rdist help to get more of these!!!!
+# 2-norm == euclidean norm == L2 norm
+# 1-norm == manhattan norm 
+# max norm == chebyshev
+
+
+
+
+
+# dot product ~ inner product ==> shows similarity (As angle between x and y gets closer, its bigger and if it gets closed to orthogonal, it gests closed to 0 meaning it is not similar.) =======>>>> get sample covariance divided by n-1 if X is mean-centered. 
+# X t(X) -> observation view & t(X) X ->  feature/variable view ===> Then, each element x_ij shows the similarity of ith observation and jth observation in X t(X)  and  ith variable and jth variable in t(X) X
+
+
+
+
+
+#Define vnorm.
+v <- 1:5
+vnorm <-function(x){
+  sqrt(t(x) %*% x)
+}
+vnorm(v)
+
+u <- v / vnorm(v) #unit vector
+
+
+
+
+#Check whether a matrix is square. 
+is_square <- function(A){
+  if(dim(A)[1] == dim(A)[2]){
+    T
+  }else{
+    F
+  }
+}
+
+
+
+
+#Trace is only defined for square matrix. 
+mtrace <- function(A){
+  if(is_square(A) == T){
+    sum(diag(A))
+  }else{
+    NA
+  }
+}
+
+
+
+
+#Definte p and q to check mtrace is a linear mapping. 
+p <- matrix(1:9, 3, 3)
+q <- matrix(10:18, 3, 3)
+  
+#Check it is a linear, by confirming additivity and homogeneity
+mtrace(p + q) == mtrace(p) + mtrace(q)
+
+c <- runif(1, 1, 500) #randomly pick number. 
+mtrace(c * p) == c *mtrace(p)
+
+
+
+
+#Verify all traces are equal.
+tr1 <- mtrace(crossprod(p, q))
+tr2 <- mtrace(tcrossprod(p, q))
+tr3 <- mtrace(crossprod(q, p))
+tr4 <- mtrace(tcrossprod(q, p))
+
+lapply(list(tr1, tr2, tr3, tr4), identical, tr1)
+sapply(list(tr1, tr2, tr3, tr4), identical, tr1)
+all(sapply(list(tr1, tr2, tr3, tr4), identical, tr1)) #If you apply "all" into lapply, it shows warning, since their class is list, not logical. 
+
+#know how to get a determinant mathematically -> only defined in square matrix. 
+```
+
+$Here\ is\ a\ proof\ of\ four\ traces\ being\ equal:$
+$\\$
+$\\$
+
+$tr(X^TY)\ =\ tr(XY^T)\ =\ tr(Y^TX)\ =\ tr(YX^T)$
+$\\$
+
+$Let\ the\ element\ of\ matrix\ X\ be\ x_{ij}\ and\ element\ of\ matrix\ Y\ be\ y_{ij}\ where\ X\ and\ Y\ are\ both\ square\ with\ the\ length\ of\ row\ and\ column\ be\ n.$
+$\\$
+
+$tr(X^TY) = (X^TY)_{11}\ +\ ...\ +\ (X^TY)_{nn} = x^T_{11}\ y_{11}\ +\ ...+\ x^T_{n1}\ y_{1n}\ +\ ...\ +\ x^T_{n1}\ y_{1n}\ +\ ...\ +\ x^T_{nn}\ y_{nn}\ =\ x_{11}\ y^T_{11}+\ ...+\ x_{n1}\ y^T_{1n}\ +\ ...\ +\ x_{n1}\ y^T_{1n}\ +\ ...\ +\ x_{nn}\ y^T_{nn}\ =\ tr(XY^T).$
+$\\$
+
+
+
+```{r section2}
+#See what mtcars a
+class(mtcars)
+typeof(mtcars)
+mode(mtcars)
+head(mtcars)
+
+
+
+#Make a new matrix. 
+M <- cbind(mtcars$mpg, mtcars$disp, mtcars$hp, mtcars$drat, mtcars$wt)
+apply(M, MARGIN = 2, FUN = mean) #Get column means
+
+
+
+
+
+#Mean centered matrix
+Mc <- scale(M, center = T, scale = F) #or, do sweep(M, MARGIN = 2, colMeans(M), FUN = "-")
+
+#check Mc
+colMeans(Mc) #all closed enough to zero, so it is mean-centered matrix
+
+
+
+
+#Another version of mean central
+sweep(M, MARGIN = 2, colMeans(M), FUN = "-") 
+
+
+
+
+#Find a column maxima
+colmax <- apply(M, 2, max) 
+
+
+
+
+#Scale by column maxima
+sweep(M, 2, colmax, FUN = "/") #or, do scale(M, F, colmax)
+
+
+
+
+
+#scale to have min = 0 and max = 1
+scaling <- function(x){
+  (x - min(x))/diff(range(x))
+}
+
+apply(M, 2, scaling)
+
+
+
+
+#There is a way to get covariance in slide 5. Divided by n-1 as it is a sample.
+#First
+cov_m <- (1/(nrow(M) - 1)) * t(Mc) %*% Mc 
+
+cov_m
+
+#Second
+cov(M)
+
+#Although identical function gives "FALSE" but there is only small difference in a decimal point....
+
+
+
+
+#There is a way to get correlation in slide 5. 
+#First -> as Mc are mean-centered. Try to use the way on pg 31 of slide 3, but it is not working...
+#cov_m / (t(Mc) %*% Mc)^2 
+#(t(Mc) %*% Mc) / sqrt((t(Mc) %*% Mc)) %*% sqrt((Mc %*% t(Mc)))
+
+
+
+#Second
+scaling2 <- sweep(Mc, 2, apply(Mc, 2, FUN = sd), FUN = "/")
+cor_m2 <- (1/(nrow(M) - 1)) * t(scaling2) %*% scaling2
+
+cor_m2
+
+#Third
+scaling <- scale(M, T, T)
+cor_m <- (1/(nrow(M) - 1)) * t(scaling) %*% scaling
+
+cor_m
+#Fourth
+cor(M)
+
+
+
+
+
+#Dummify function 
+dummify <-function(x, all = T){
+  if(all == T){
+    new_matrix<- matrix(1, length(x), length(levels(x))) #create an arbitrary matrix that is made of 1 only.
+    colnames(new_matrix) <- c(levels(x))
+    rownames(new_matrix) <- x
+    #assign 0 binary if row and column numbers are not the same
+    for (i in 1:length(x)){
+      for (j in 1:length(levels(x))){
+        if(rownames(new_matrix)[i] != colnames(new_matrix)[j]){
+          new_matrix[i,j] <- 0
+        }
+      }
+    }
+    
+    return(new_matrix)
+  }else{
+    new_matrix<- matrix(1, length(x), length(levels(x))) #create an arbitrary matrix that is made of 1 only.
+    colnames(new_matrix) <- c(levels(x))
+    rownames(new_matrix) <- x
+    #assign 0 binary if row and column numbers are not the same
+    for (i in 1:length(x)){
+      for (j in 1:length(levels(x))){
+        if(rownames(new_matrix)[i] != colnames(new_matrix)[j]){
+          new_matrix[i,j] <- 0
+        }
+      }
+    }
+    # IF all=F, then we only extract k-1 indicators, by taking out one column randomly.
+    random_number <- sample(1:3,1)
+    return(new_matrix[ ,-(random_number)])
+  }
+}
+
+#other way
+dummify2 <-function(x, all = T){
+  x <- as.factor(x)
+  #this function compares the set (4, 6, 8) with each element of x.
+  sapply(levels(x), function(data_element){as.integer(x == data_element)}) 
+}
+
+cyl <- factor(mtcars$cyl)
+CYL1 <- dummify(cyl, all = T)
+CYL2 <- dummify(cyl, all = F)
+
+#Crosstable function 
+
+crosstable <-function(x, y){
+  dumc <- dummify(x, all = T)
+  dumy <- dummify(y, all = T)
+  return(t(dumc) %*% dumy)
+}
+
+gear <- factor(mtcars$gear)
+xtb <- crosstable(cyl, gear)
+
+
+CYL1
+dummify2(cyl, all = T)
+xtb
+```
+
+
+
+
+
+
+
+
+
+

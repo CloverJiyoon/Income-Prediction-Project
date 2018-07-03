@@ -1,0 +1,222 @@
+---
+title: "Jin Kweon (3032235207) Lab4"
+author: "Jin Kweon"
+date: "9/23/2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr, warn.conflicts = F)
+library(ggplot2)
+```
+
+fitted values = predicted values
+lm(response $\sim$ expression) corresponds to a linear model: response = $\beta_0$ + $\beta_1$expression + $\epsilon$:
+\[
+  \begin{pmatrix}
+    y1 \\
+    y2 \\
+    y3 \\
+    . \\
+    . \\
+    . \\
+    y_n \\
+  \end{pmatrix}
+  =
+  \begin{pmatrix}
+    1 & x_{11} \\
+    1 & x_{21} \\
+    1 & x_{31} \\
+    . \\
+    . \\
+    . \\
+    1 & x_{n1} \\
+  \end{pmatrix}
+  \begin{pmatrix}
+    \beta_1 \\
+    \beta_2 \\
+  \end{pmatrix}
+  +
+  \begin{pmatrix}
+    \epsilon_1 \\
+    \epsilon_2 \\
+    \epsilon_3 \\
+    . \\
+    . \\
+    . \\
+    \epsilon_n \\
+  \end{pmatrix}
+\]
+
+
+```{r pg1-5}
+#Q. when I use "-" in the lm function reg, it does not show its coefficient... why????
+#Q. What are the best ways to recover from mean-centered and standardized data? Can we just literally change to original data set using sweep and apply function to do this?
+
+reg <- lm(mpg ~ disp - hp, data = mtcars)
+
+
+reg1 <- lm(mpg ~ disp, data = mtcars)
+summary(reg1)
+reg1
+names(reg1)
+
+scale_mt <- as.data.frame(scale(mtcars, T, F))
+reg2 <- lm(mpg ~ disp, data = scale_mt)
+#Since it is mean-centered, the intercept should be approsimately zero.
+
+recover_reg2 <- lm(mpg ~ disp, data = sweep(scale_mt, 2, apply(mtcars, 2, mean), "+"))
+#Recover
+
+scale_mt2 <- as.data.frame(scale(mtcars, T, T))
+reg3 <- lm(mpg ~ disp, data = scale_mt2)
+
+
+#Get OLS with no intercept is different with getting zero intercept by doing mean-centered. 
+lm(mpg ~ disp -1, data = mtcars)
+lm(mpg ~ disp +0, data = mtcars)
+
+
+lm(mpg ~ disp, data = mtcars, subset = am == 0)
+#Same as the one below:
+new <- mtcars %>% filter(am == 0)
+lm(mpg ~ disp, new)
+
+
+reg0 <- lm(mpg ~., data = mtcars) 
+#use all variables. When you want to exclude just one variable, you might be able to modify data frame, and use dot.
+
+
+reg_sum <- summary(reg1)
+reg_sum
+class(reg_sum)
+names(reg_sum) #contain different things with reg1
+```
+
+
+```{r page6}
+plot(mtcars$disp, mtcars$mpg)
+abline(reg1, col = "Red", lty = 2, lwd = 3) #lty is a line type and lwd is line width
+```
+
+
+
+```{r page6b}
+plot.new()
+plot.window(xlim = c(50, 500), ylim = c(10, 40))
+points(mtcars$disp, mtcars$mpg, pch = 20, cex = 1) #pch = dot type. cex = size
+abline(reg1, col = "red", lwd = 2)
+axis(side = 1, pos = 10, at = seq(50, 500, 50)) #side=1 means x axis with pos=10 starting point
+axis(side = 2, las = 1, pos = 50, at = seq(10, 40, 5)) #side=2 means y axis
+```
+
+
+```{r pg7}
+#see warning if i do xlim(100,500) because there are some data outside of x < 100.
+
+graph <- ggplot(data = mtcars, aes(x = disp, y = mpg))
+graph <- graph + geom_point() + geom_text(aes(label = rownames(mtcars)), hjust = 0, alpha = 0.5) +
+  xlim(50,500) +
+  geom_smooth(method = "lm", se = FALSE)
+#or, I can do this below:
+#+ geom_abline(intercept = reg1$coefficients[1], slope = reg1$coefficients[2], col = "blue", lwd = 1.2)
+graph
+```
+
+
+**<Plot check>**
+• a plot of residuals versus fitted values: for example there may be a pattern in the
+residuals that suggests that we should be fitting a curve rather than a line;
+• a normal probability: if residuals are from a normal distribution points should lie,
+to within statistical error, close to a line.
+
+$\\$
+
+Keep in mind that these diagnostic plots are not definitive.
+Rather, they draw attention to points that require further investigation.
+```{r pg8}
+plot(reg1, which = 1) #seems like there is a little bit of pattern. Curve might be better.
+plot(reg1, which = 2) # follows normal pretty well. 
+
+```
+
+
+
+
+
+ANOVA test gives you: $\sum{(y_i\ -\ \bar{y})^2}\ =\ \sum{(y_i\ -\ \hat{y_i})^2}\ +\ \sum{(\hat{y_i}\ -\ \bar{y})^2}$. Below test outputs RSS = 317.16, Regss = 808.89, and TSS = 808.89 + 317.76. As explanatory variables go up, RSS goes down (as $R^2$ goes up), and Regss goes up. Tss stays the same although the number of explanatory variable changes. So, it is about changes between RSS and Regss. 
+```{r pg8b}
+reg_anova <- anova(reg1)
+reg_anova #have the same F value as I got from lm summary. 
+#We reject the null. So, disp should be kept for linear regression. 
+#Residuals Sum Sq = RSS 
+#explantory varaible Sum Sq = Regss
+#sum of RSS and Regss = TSS
+#Mean sq = Sum Sq / DF
+
+anova(lm(mpg ~ disp + hp, data = mtcars))
+
+R2 <- (reg_anova$`Sum Sq`[1] / sum(reg_anova$`Sum Sq`))
+R2 
+summary(reg1)$r.squared
+
+```
+
+
+Although this works, computationally it is not the best way to compute b. Why? Because it is inefficient and be very inaccurate when the predictors are strongly correlated.
+
+Always include intercept term!!!
+```{r OLS}
+int <- rep(1, nrow(reg1$model))
+
+x <- cbind(int, reg1$model[,2])
+y <- reg1$model[,1]
+
+solve(t(x) %*% x) %*% t(x) %*% y
+
+solve(crossprod(x, x), crossprod(x,y))
+
+coef <- reg1$coefficients
+coef
+```
+
+
+$$y\ =\ X\hat{\beta}\ =\ (QR)\hat{\beta}$$, so, $$\hat{\beta}\ =\ (QR)^{-1}y\ =\ R^{-1}Q^{-1}y\ =\ R^{-1}Q^Ty,\ as\ Q^TQ\ =\ I$$. And, to be unique, this works only if X is linerly independent meaning that X has full rank, and this is the same as beta's least square estimator. 
+```{r QR}
+#Q. what is QR$qr??? 
+
+QR <- qr(x) #same as reg1$qr
+
+Q <- qr.Q(QR)
+R <- qr.R(QR)
+
+backsolve(R, crossprod(Q, y))
+forwardsolve(R, crossprod(Q, y))
+solve(R, crossprod(Q, y))
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

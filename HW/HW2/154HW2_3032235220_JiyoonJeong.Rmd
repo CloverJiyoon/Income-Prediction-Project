@@ -1,0 +1,344 @@
+---
+title: "154HW2_3032235220_JiyoonJeong"
+author: "Jiyoon Clover Jeong"
+date: "9/17/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+```
+
+
+```{r}
+
+data <- read.csv("/Users/cloverjiyoon/2017Fall/Stat 154/data/temperature.csv")
+
+head(data)
+
+```
+
+## Explanatory Phase
+
+```{r}
+summary(data)
+
+ggplot(data,aes(x=X,y=January)) + geom_point()+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+ggplot(data,aes(x=X,y=February)) + geom_point()+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggplot(data,aes(x=X,y=March)) + geom_point()+ theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+pairs(data[,2:13])
+
+
+
+
+```
+
+
+
+## 1) Calculation of primary PCA outputs (30 pts)
+
+
+### a)
+
+```{r}
+
+X <- as.matrix(data[1:23,2:13])
+rownames(X) <- data[1:23,1]
+X <- scale(X, center = T, scale = T)
+n <- 23
+corr <- 1/(n-1) * t(X) %*% X
+loadings <- eigen(corr)$vectors
+rownames(loadings) <- colnames(X)
+colnames(loadings) <- paste0("PC",1:12)
+sqrt(sum(loadings[,1]^2))  # unit norm
+loadings[,1:4]
+
+# Check PCA with function prcomp
+pca = prcomp(X, scale. = T)
+
+# loading
+pca$rotation[,1:4]
+
+
+```
+
+### b) Principal Components
+
+```{r}
+  
+pc <- X %*% loadings[,1:12,drop=F]    
+
+pc[,1:4]
+
+
+```
+
+
+### c) eigenvalues and their sum (equal to the number of variables)
+
+```{r}
+
+eval <- eigen(corr)$values
+eval
+
+# sqrt of eigenvalues    
+pca$sdev^2            # sd(pc[,1,drop=F])
+
+
+sum(eval)
+
+#check with the build in function prcomp
+sum(pca$sdev^2)
+
+```
+
+
+
+## 2) Choosing the number of dimensions to retain/examine (30 pts)
+
+
+### a) Make a summary table of the eigenvalues
+
+```{r}
+
+
+proportion <- eval/ncol(X) * 100
+cum_prop <- cumsum(proportion)
+table <- cbind(eval, proportion, cum_prop)
+rownames(table) <- paste0("PC",1:12)
+table
+
+```
+
+eval(first column) : Eigenvalues. Each eigenvalue represents the variance captured by each principal component
+
+proportion(second column ): The percentage of variance = $\lambda_i/p$. P is the number of variable = sum of eigenvalues.
+
+cum_prop(Third column): Cmulative percentage of variance
+
+Comment : Since PC1, PC2, and PC3 captures almost all the variances(proportion is greater than 1), we can say these three components explains the data properly.  
+
+
+
+### b) Create a scree-plot (with axis labels) of the eigenvalues
+
+```{r}
+
+ggplot(data = as.data.frame(table[,1]),aes(x = 1:12,y = eval)) + geom_point() + geom_line() + 
+ggtitle("Screeplot of Eigenvalues") + labs(x = "PC", y = "e-values") + scale_x_continuous(breaks=seq(1,12,1))
+
+```
+
+We can see that the 'elbow' of screeplot appears at PC2(2 at axis). Therefore we can keep PC1 and PC2 to compress original dimension of X and get the similar variation as the original data.
+
+
+### c) If you had to choose a number of dimensions (i.e. a number of PCs), how many would you choose and why?
+
+According to the information from screeplot and the Kaiser's rule, I would choose 2 dimensions(PC1 and PC2) since the eigenvalues of PC1 and PC2 are greater than 1. 
+
+
+
+## 3) Studying the cloud of individuals
+
+### a) Create a scatter plot of the cities on the 1st and 2nd PCs
+
+```{r}
+
+
+X <- as.matrix(data[1:23,2:13])
+rownames(X) <- data[1:23,1]
+
+# Get Supplementary  
+Y <- as.matrix(data[24:35,2:13])
+rownames(Y) <- data[24:35,1]
+Y <- scale(Y, center = colMeans(X), scale = apply(X,2,sd))
+
+supplPC1 <- Y %*% loadings[, 1, drop=F]
+supplPC2 <- Y %*% loadings[, 2, drop=F]
+
+supplPC1 <- rbind(pc[,1, drop = F],supplPC1)
+supplPC2 <- rbind(pc[,2, drop = F],supplPC2)
+suppl <- c(rep("Active",23),rep("Suppl",35-23))
+totalPC <- cbind(supplPC1, supplPC2, data[,"Area",drop = F], suppl)
+
+ggplot(data = totalPC, aes(x = PC1, y = PC2, color = Area)) + geom_point() + geom_text(aes(color = factor(suppl), label = rownames(totalPC)), size = 3) +  geom_vline(xintercept = 0) + geom_hline(yintercept = 0)
+```
+
+
+The graph shows that the areas located in south side tend to have lower pc1, the areas located in East side tend to have higher pc2, the areas located in west side tend to have medium pc1 and pc2, and areas located in north side tend to have high pc1. In conclusion, cities seems to share some common information according to their location.
+
+
+### b) Compute the quality of individuals representation, that is, the squared cosines given by:
+
+$\\$
+
+$\cos^2(i,k) = \frac{z^2_{ik}}{d^2(x_i,g)}$
+
+$\\$
+
+
+```{r}
+
+dist <- function(x1,x2){
+  sum((x1-x2)^2)
+}
+
+X <- as.matrix(data[1:23,2:13])
+
+X <- scale(X, center = T , scale = T)
+
+g <- colMeans(X)
+
+cos <- data.frame()
+for(i in 1:23){
+  for(k in 1:12){
+    cos[i,k] = pc[i,k]^2 / dist(X[i,],g)
+  }
+}
+
+rownames(cos) <- data[1:23,1]
+colnames(cos) <- paste0("PC",1:12)
+
+print("Adding the squared cosines over all principal axes for a given
+individual should be 1")
+sum(cos[3,])   # should sum up to 1 
+
+
+# What cities are best represented on the first two PCs? 
+rownames(cos)[which.max(cos[,1])]
+rownames(cos)[which.max(cos[,2])]
+
+# What cities have the worst representation on the first two PCs?
+rownames(cos)[which.min(cos[,1])]
+rownames(cos)[which.min(cos[,2])]
+
+cos[,1:4]
+```
+
+
+Rome and London are best represented on PC1 and PC2 while London and Stockholm have the worst representation on PC1 and PC2. 
+
+
+### c) Compute the contributions of the individuals to each extracted PC.
+
+$\\$
+
+$ctr(i,k) = \frac{m_iz^2_{ik}}{\lambda_k}* 100$
+
+$\\$
+
+```{r}
+
+ctr <- data.frame()
+for(i in 1:23){
+  for(k in 1:12){
+    ctr[i,k] =  (pc[i,k]^2 / (n-1)) / eval[k] * 100
+  }
+}
+
+rownames(ctr) <- data[1:23,1]
+colnames(ctr) <- paste0("PC",1:12)
+
+sum(ctr[,1])   # For a given component, the sum of the contributions of all observations is equal to 100.
+
+ctr[,1:4]
+
+# The most influential cities on PC1 and PC2
+rownames(ctr)[which.max(ctr[,1])]
+rownames(ctr)[which.max(ctr[,2])]
+
+```
+
+Athens is the most influential city on PC1 and Reykjavik is the most influential city on PC2
+
+
+
+
+## 4) Studying the cloud of variables
+
+### a) Calculate the correlation of all quantitative variables (active and supplementary) with the principal components.
+
+```{r}
+X <- as.matrix(data[1:23, -c(1,18)])
+X <- scale(X, center = T, scale = T)
+rownames(X) <- data[1:23,1]
+
+# Ignore=========================================
+# 
+# cor <- cor(X)
+# loadings <- eigen(cor)$vectors
+# 
+# pc <- X %*% loadings[,1:16, drop = F]
+# 
+# # check with prcomp
+# 
+# head(prcomp(X, scale. = T)$x,1)
+# head(pc,1)
+# 
+# # why princomp is different?
+# 
+# #head(princomp(X, cor = T)$scores, 1)
+# 
+# 
+# 
+# colnames(pc) <- paste0("PC",1:16)
+# Ignore=========================================
+
+
+
+corr <- cor(X[,1:16],pc[,1:12])   # corr <- cor(X, pc)
+
+
+corrsq <- corr^2
+
+# sum of the sum of the squared coeffcients of correlation between a variable and all the principal components is equal to 1.
+
+sum(corrsq[1,])
+
+corr[,1:4]
+
+```
+
+### b) Make a Circle of Correlations plot between the PCs and all the quantitative variables
+
+```{r}
+
+type <- c(rep("Active",12),rep("Suppl",4))
+table <- cbind(as.data.frame(corr[,1:2, drop = F]), type)
+table <- as.data.frame(table)
+
+dat = data.frame(x=runif(1), y=runif(1)) # for circle
+
+p <- ggplot(data = table, aes(x = PC1, y = PC2, color = type, label = rownames(table))) + geom_point() + geom_text(size = 3) + 
+  xlim(c(-1.1,1.1)) + ylim(c(-1.1,1.1)) +
+  geom_segment(data=table, aes(x=0, xend=PC1, y=0, yend=PC2), color="black", arrow = arrow(length=unit(0.0001,"npc")), size = 0.2) 
+
+
+g<-p+annotate("path",
+   x=0+1*cos(seq(0,2*pi,length.out=100)),
+   y=0+1*sin(seq(0,2*pi,length.out=100)),
+   size = 0.2)
+
+g
+
+
+```
+### c) Based on the above parts (a) and (b), how are the active and supplementary variables related to the components?
+
+
+Active variables tend to have lower PC1 scores and supplementary variables tend to have higher PC1 scores. Variable Annual is the only exception for this case since Annual is supplementary variable but has lower PC1 score. This suggests that Months(January~Decemer) variables and Anuual variables share smiliar characteristic while supplementary variables do too. We can make up a story by considering PC1 as temperature and PC2 as precipitation. In spring and winter seasons (January~March and October~December), the amounts of snow differ based on latitude. In summer and fall seasons(April~September), countries in western europe rains more often than the ones on the eastern sides.
+
+
+## 5) Conclusions
+
+From the graphs that we draw, we can conclude that variable Annual is highly correlated to other months variable.(January, February, ...) This is intuitively obvious since the variable Annual is the mean of other months variable. Also, we can conclude that variable Amplitude and variable Longtitude is fairly correlated. April~September and Amplitude and Longtitude has positive PC2 values while January~March and October~December and Latitude has negative PC2 values. In conclusion, summer and fall seasons(April~September) are affected by amplitude and longtitude while spring and winter seasons(January~March and October~December) are affected by latitude. 
+

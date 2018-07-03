@@ -1,0 +1,216 @@
+---
+title: "Lab 2 - Jin Kweon"
+author: "Jin Kweon"
+date: "8/28/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##Use Latex to describe the problem by using latex.
+
+$$M\ =\ UDV^T$$
+```{r SVD}
+?USArrests
+head(USArrests)
+class(USArrests)
+dim(USArrests)
+
+SVD <- svd(USArrests) # use nu and nv to control over the number of left/right singular vectors to be computed. 
+U <- SVD$u
+D <- SVD$d
+V <- SVD$v
+
+identical(U %*% diag(D) %*% t(V), USArrests) # It is false but they are really similar.
+U %*% diag(D) %*% t(V)
+USArrests
+
+#SVD rank reduction theorem
+a <- matrix(0, nrow(USArrests) ,length(USArrests))
+for (i in 1:4){
+  a <- a + D[i] * U[,i] %*% t(V[,i])
+}
+
+head(a)
+head(USArrests)
+
+#Define MA
+MA <- USArrests$Murder + USArrests$Assault
+
+#Define Arrests2
+Arrests2 <- as.data.frame(cbind(USArrests, MA))
+
+#Compute SVD of it.
+SVD2 <- svd(Arrests2)
+
+SVD2$d
+SVD$d
+#Q. signular values of Arrests2 are way smaller than USArrests'....????
+
+library(Matrix)
+rankMatrix(Arrests2)[1] #dimension of Arrests2
+
+plot(U[,1], U[,2], xlab = "U1", ylab = "U2", main = "Plot of States (first 2 left singular vectors)")
+
+library(ggplot2)
+datas <- as.data.frame(cbind(U[,1], U[,2]))#ggplot does not read matrix. They can read data.frame. 
+rownames(datas) <- rownames(USArrests)
+two_left <- ggplot(datas, aes(x = V1, y = V2, label = rownames(datas))) + geom_text() + labs(title = "Plot of States (first 2 left singular vectors)", y = "U2", x = "U1")
+
+
+datas2 <- as.data.frame(cbind(V[,1], V[,2]))#ggplot does not read matrix. They can read data.frame. 
+rownames(datas2) <- colnames(USArrests)
+two_right <- ggplot(datas2, aes(x = V1, y = V2, label = rownames(datas2))) + geom_text() + labs(title = "Plot of Variables (first 2 right singular vectors)")
+```
+
+
+
+
+```{r eigen}
+#Correlation and covariance matrix will give min(n,p) square matrix. 
+R <- cor(USArrests) 
+
+evd <- eigen(R)
+
+x<- scale(R, T, T)
+(1/(ncol(x)-1)) * t(x) %*% x
+
+evd2 <- eigen(R, symmetric = T) #Q. What does symmetric really do....? 
+eigenvalues <- eigen(R, T, T)
+eigenvalues
+
+X <- scale(USArrests, T, F)
+#or, sweep(USArrests,2, apply(USArrests, 2, mean), "-")
+
+
+#Q. Sum of square matrix = cross-product matrix ??? What is sum of square matrix? 
+S <- crossprod(X)
+cov(X) /S
+solve(S)
+
+eigen(S)
+eigen(solve(S))
+
+```
+
+
+```{r power_method}
+
+vnorm <- function(x){
+  sqrt(t(x) %*% x)
+}
+
+#Using L_2 norm
+power_method2 <- function(mat, init) {
+  for (i in 1:100){
+    init <- mat %*% init
+    init <- init / as.numeric(vnorm(init))
+  }
+  return(init)
+}
+
+
+A <- matrix(c(2,1,-12,-5), 2, 2)
+v0 <- c(1,1)
+
+v_old <- v0
+for (k in 1:4){
+  v_new <- A %*% v_old 
+  print(paste("iteration =", k))
+  print(v_new)
+  v_old <- v_new
+}
+#scale it with L_inf norm.
+
+A <- matrix(c(5,-4,3,-14,4,6,11,-4,-3),3,3)
+v0 <- c(1,0,0)
+
+#Using L_inf norm
+power_method_inf <- function(mat, init) {
+  for (i in 1:100){
+    init <- mat %*% init
+    init <- init / norm(init, "M")
+  }
+  return(init)
+}
+val <- power_method_inf(A,v0) #First e-vector. 
+e <- crossprod((A %*%val), val) / (norm(val, "M")^2) #Work!!!! This is just one e-value. 
+
+# Q. Why this is not working....???? (try to deflate and get second value/vector here) what is wrong...?
+newA <- A - tcrossprod(val) #Deflating
+val2 <- power_method_inf(newA, v0) 
+e2 <- crossprod((newA %*%val2), val2) / (norm(val2, "M")^2) #second e-value.
+
+
+
+#L_p norm
+vnorm <- function(x, p){
+  orig <- sum(abs(v)^p)
+  new <- orig^(1/p)
+  return(new)
+}
+
+#Using L_p norm
+power_methodp <- function(mat, init) {
+  for (i in 1:100){
+    init <- mat %*% init
+    init <- init / as.numeric(vnorm(init, 3)) #Let's say p = 3
+  }
+  return(init)
+}
+A <- matrix(c(5,-4,3,-14,4,6,11,-4,-3),3,3)
+v0 <- c(1,0,0)
+
+
+value <- power_methodp(A,v0) #First e-vector. 
+e <- crossprod((A %*%value), value) / vnorm(value,3) #Work!!!! This is just one e-value. 
+
+
+#If there are more than one dominant eigenvalues, then what willl happen? it still converges to a e-vector. 
+B <- diag(3)
+init <- c(1,1,1)
+power_methodp(B, init)
+C <- B - tcrossprod(power_methodp(B, init))
+power_methodp(C, init)
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,540 @@
+---
+title: "Jin Kweon (3032235207) HW2"
+author: "Jin Kweon"
+date: "9/18/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plyr)
+library(dplyr, warn.conflicts = T)
+library(ggplot2)
+library(GGally, warn.conflicts = T)
+library(Hmisc, warn.conflicts = T)
+library(stats)
+library(plotrix)
+library(reshape, warn.conflicts = T)
+library(corrgram, warn.conflicts = T)
+```
+
+##Name: Jin Kweon
+##Lab: 11am - 1pm (section 102) (course number: 20980)
+
+$\\$
+$\\$
+$\\$
+
+Monthly temperatures (in Celsius) were collected for the main European capitals and other major cities. In addition to the monthly temperatures, the average annual temperature and t  he thermal amplitude (difference between the maximum monthly average and the minimum monthly average of a city) were recorded for each city. The data set also includes two quantitative positioning variables (latitude and longitude) as well as one categorical variable: Area (with four categories north, south, east, and west).
+
+Thus, the capital will be regarded as active individuals (the first 23 rows) while the other cities will be regarded as supplementary individuals (i.e. individuals which are not involved in the computation of the components).
+
+Research Question. The main research question is: Can we summarize monthly precipitation with only a small number of components?
+
+```{r data_import}
+temp <- read.csv("/Users/yjkweon24/Desktop/Cal/2017 Fall/Stat 154/data/temperature.csv", stringsAsFactors = F, header = T)
+
+dim(temp)
+class(temp)
+temp <- na.omit(temp)
+```
+
+
+```{r EDA}
+summary(temp)
+par(mfrow = c(2,4))
+
+#histogram
+hist(temp$January, main = "Jan")
+hist(temp$February, main = "Feb")
+hist(temp$March, main = "Mar")
+hist(temp$April, main = "Apr")
+hist(temp$May, main = "May")
+hist(temp$June, main = "June")
+hist(temp$July, main = "July")
+hist(temp$August, main = "Aug")
+hist(temp$September, main = "Sep")
+hist(temp$October, main = "Oct")
+hist(temp$November, main = "Nov")
+hist(temp$December, main = "Dec")
+hist(temp$Annual, main = "Annual")
+hist(temp$Amplitude, main = "Amplitude")
+hist(temp$Latitude, main = "Latitude")
+hist(temp$Longitude, main = "Longitude")
+
+par(mfrow = c(1,1))
+#correlation matrix
+#rcorr(as.matrix(temp[,2:17]))
+cor(temp[,2:17])
+
+#Scatterplot matrix
+ggpairs(temp[,2:9])
+ggpairs(temp[,10:17])
+
+
+```
+As it can be easily caught, the most of the histogram shows the the mode to be placed in the middle. And, another interesting thing is that most of the plots show the decent correlation. Especially, it is interesting latitude has high correlation with other months, and actually it makes sense as latitude gets higher, it gets colder. However, longitude has smaller effects on temperatures compared to latitude. 
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+
+#Part 1
+
+Here, I extract the active and supplementary variables and individuals, just in case.
+```{r part1}
+active <- temp[1:23, 1:13] #active individuals and variables, with the citi names.
+supplementary <- temp[24:35, c(1, 14:18)] #supplementary individuals and variables, with the citi names
+```
+
+$\\$
+
+$\\$
+
+*I did not change the column and row names for prcomp, since they are just for double checking my answers.* 
+
+Here are my parts a ~ c for question #1. (* I included different ways.)
+
+###a. Obtain the loadings and store them in a matrix, include row and column names. Display the first four loadings (10 pts).
+
+```{r part1_a}
+#a - first way (eigen decomposition)
+scale_active <- scale(active[,-1], T, T)
+R <- cor(scale_active)
+v1 <- eigen(R)$vectors
+colnames(v1) <- paste0("PC", 1:12)
+rownames(v1) <- colnames(active[,-1])
+v1[,1:4]
+
+#a - second way (eigen decomposition 2)
+R <- (1/ (nrow(scale_active) - 1)) * t(scale_active) %*% scale_active
+v2 <- eigen(R)$vectors
+colnames(v2) <- paste0("PC", 1:12)
+rownames(v2) <- colnames(active[,-1])
+#v2[,1:4]
+
+#a - third way (svd decomposition)
+svd <- svd(scale_active)
+v3 <- svd$v
+colnames(v3) <- paste0("PC", 1:12)
+rownames(v3) <- colnames(active[,-1])
+#v3[,1:4]
+
+#check with prcomp
+prcomp(active[,-1], scale = T)$rotation[,1:4]
+```
+
+$\\$
+
+###b. Obtain the principal components and store them in a matrix, include row and column names. Display the first four PCs (10 pts).
+
+```{r part1_b}
+#b - first way (eigen decompsition)
+z1 <- scale_active %*% v1
+colnames(z1) <- paste0("PC", 1:12)
+rownames(z1) <- active[,1]
+z1[,1:4]
+
+#b - second way (svd decomposition)
+u <- svd$u
+d <- diag(svd$d)
+z2 <- u %*% d
+colnames(z2) <- paste0("PC", 1:12)
+rownames(z2) <- active[,1]
+#z2[,1:4]
+
+#b - check with procomp
+z3 <- scale_active %*% prcomp(active[,-1], scale = T)$rotation
+colnames(z3) <- paste0("PC", 1:12)
+rownames(z3) <- active[,1]
+#z3[,1:4]
+
+#b - doublecheck with prcomp
+prcomp(active[,-1], scale = T)$x[,1:4]
+
+```
+
+$\\$
+
+###c. Obtain the eigenvalues and store them in a vector. Display the entire vector, and compute their sum. (10 pts)
+
+```{r part1_c}
+#c - first way (eigen decomposition)
+eigen1 <- eigen(R)$values
+eigen1 <- as.vector(eigen1)
+eigen1
+sum(eigen1) # and it makes sense, as we have 12 variables. 
+
+#c - second way (svd decomposition)
+x <- scale(u %*% d %*% t(v3), T, T)
+eigen(cor(x))$values
+#sum(eigen(cor(x))$values)
+
+#c - check with prcomp
+(prcomp(active[,-1], scale = T)$sdev)^2
+#sum((prcomp(active[,-1], scale = T)$sdev)^2)
+
+#c - check with prcomp
+as.vector(apply(prcomp(active[,-1], scale = T)$x, 2, sd)^2)
+sum(as.vector(apply(prcomp(active[,-1], scale = T)$x, 2, sd)^2))
+```
+
+####Summaries
+
+Z = XV and dim(Z) = n by p, dim(V) = p by p, dim(X) = n by p.
+
+scale(data, T, T) -> standaradized matrix, X.
+
+pca_prcomp$rotation -> loadings/eigen-vectors, V
+
+pca_prcomp\$x == scale(quant, T, T) %*% pca_prcomp$rotation -> principal components (matrix) / scores, Z
+
+pca_prcomp$center -> colMeans
+
+pca_prcomp$scale -> apply(data, 2, sd)
+
+pca_prcomp\$sdev -> apply(pca_prcomp\$x, 2, sd) or sqrt(eigen(cor(scale(quant, T, T)))$values)
+
+
+
+*Sum of eigenvalues means sum of variations of PCA, as each variance is equal to the corresponding eigen value.*
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+#Part 2
+
+###a. Make a summary table of the eigenvalues: eigenvalue in the first column (each eigenvalue
+represents the variance captured by each component); percentage of variance in the
+second column; and cumulative percentage in the third column. Comment on the table.
+(10 pts)
+
+```{r part2_a}
+#a
+eigen_data <- matrix(0, nrow = round(sum(eigen1),0), ncol = 3)
+colnames(eigen_data) <- c("eigenvalue", "percentage", "cumulative.percentage")
+rownames(eigen_data) <- paste0("comp", 1:sum(eigen1))
+
+eigen_data[,1] <- eigen1
+percentage <- apply(as.matrix(eigen1), 2, sum(eigen1), FUN = "/") * 100
+eigen_data[,2] <- percentage
+
+cum_fun <- function(x){ #x should be n * 1 column matrix
+  for (i in 2:nrow(x)){
+    x[i,] <- x[i-1,] + x[i,]
+  }
+  return(x)
+}
+cumulative <- cum_fun(percentage) #or use cumsum!!!
+eigen_data[,3] <- cumulative
+
+print(eigen_data)
+
+barplot(eigen_data[,1], main = "Bar-chart of eigenvalues", names = c(paste("PC", 1:12)), cex.names = 0.5)
+
+paste("Variation in first PC:", eigen_data[1,2], "%")
+paste("Variation in second PC:", eigen_data[2,2], "%")
+```
+
+
+####Comment on part a: 
+As it can be easily seen in the table, there are two/three first big eigen values on the top. And, the first two/three PC have the most variations. 
+
+$\\$
+
+###b. Create a scree-plot (with axis labels) of the eigenvalues. What do you see? How do you
+read/interpret this chart? (10 pts)
+
+```{r part2_b}
+#b
+graph <- ggplot(as.data.frame(eigen_data[,1]), aes(x = 1:12, y = as.numeric(eigen_data[,1])))
+graph <- graph + geom_bar(stat = "identity", alpha = 0.3, color = "red") + geom_point() + geom_line() +
+  labs(title = "Screeplot of eigenvalues", x = "number of components", y = "values") +
+  scale_x_continuous(breaks=seq(1,12,1))
+graph
+```
+
+####Comment on part b: 
+I will say the elbow is on the third one. So, I will retain three PCs for my further investigations. However, this is not 100% accurate, and other people might have differnt opinions, and that is why I personally do not like screeplot method compared to others'.
+
+$\\$
+
+###c. If you had to choose a number of dimensions (i.e. a number of PCs), how many would
+you choose and why? (10 pts)
+
+####Comment on part c:
+Choose the the number of PCs/components to retain. There are four big different ways: screeplot with elbow, predetermined amount of variation, kaiser rule, jollife rule, 
+
+
+• Retain just enough components to explain some specified, large percentage of the total variation of the original variables. For example, how many PCs would you retain to capture 85% of the total variation? ---> predetermined amount of variation.
+
+Ans: Retain only the first one.
+
+
+
+• Exclude those PCs whose eigenvalues are less than the average: $\sum_{h =1}^{p} \frac{\lambda_h}{p}$. Using this criterion, how many PCs would you retain?
+
+Ans: The average will be 1, always. And, I can retain 2 PCs. 
+
+
+
+• When the PCs are extracted from the correlation matrix, like in this case, the average eigenvalue is one; components with eigenvalues less than one are therefore excluded. This rule is known as Kaiser’s rule. Using this criterion, how many PCs would you retain? ---> Kaiser's rule
+
+Ans: Retain first two. 
+
+
+
+• Jollife (1972) proposed a variation of the Kaiser’s rule: exclude PCs whose eigenvalues are less than 0.7. Under this criterion: how many PCs would you retain? ---> Jollife's rule
+
+Ans: Retain first three. 
+
+
+• Cattel (1965) suggests plotting the eigenvalues with the so-called scree-plot or scree diagram—like the bar-chart of eigenvalues. Cattel suggests looking for an “elbow” in the diagram, this would correspond to a point where “large” eigenvalues cease and “small” eigenvalues begin. With this rule, how many PCs would you retain? ----> Scree plot
+
+Ans: Retain first three. 
+
+
+####Conclusion:
+Keep either two or three PCs. 
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+#Part 3
+
+###a. Create a scatter plot of the cities on the 1st and 2nd PCs (10 pts).
+--> The key point here is to get supplementary scaled by active mean and standard deviation. Also, loadings should come from active, not from supplementary. It is because we want to use one city from one country to make it equal PC effect, and also, we want to compare how supplementary works on the active PC plots of individuals. That is the point of this example. 
+
+```{r part3_a}
+options(scipen=999)
+#a
+supplementary <- temp[24:35, 1:13] #supplementary individuals, with the city names.
+scale_suppl <- scale(supplementary[,-1], colMeans(active[,-1]), apply(active[,-1], 2, sd)) #scale with active mean and sd.
+
+pc1_suppl <- scale_suppl %*% v1[,1]
+rownames(pc1_suppl) <- supplementary[,1]
+pc2_suppl <- scale_suppl %*% v1[,2]
+rownames(pc2_suppl) <- supplementary[,1]
+
+pc1_comb <- rbind(z1[,1, drop = F], pc1_suppl)
+pc2_comb <- rbind(z1[,2, drop = F], pc2_suppl)
+
+pca_combined <- cbind(pc1_comb, pc2_comb) #PCA matrix/scores for active and supplementary combined.
+ac_sup_diff <- c(rep("active", nrow(active)), rep("supplementary", nrow(supplementary))) #add this so it will help me draw ggplots.
+city <- temp[,ncol(temp), drop = F]
+pca_combined <- cbind(pca_combined, ac_sup_diff, city)
+
+graph2 <- ggplot(as.data.frame(pca_combined), aes(x = PC1, y = PC2, colour = Area))
+graph2 <- graph2 + geom_point() + labs(title = "Scatter plot of cities") +
+  geom_vline(xintercept = 0) + geom_hline(yintercept = 0) + 
+  geom_text(aes(color = factor(ac_sup_diff), label = rownames(pca_combined), hjust = -0.3), size = 2)
+graph2
+```
+
+####Comment on part a: 
+Most of the supplementary variables cities are on the negative sides. And, it is because most of the supplementary cities are on the low latitude, and that totally makes sense. From the color of areas on the graph, PC1 might stand for something similiar to latitude. Also, PC2 might stand for longitude, so for example, Moscow is in the eastl on the other hand, Paris is on the west side of the Europe.
+
+$\\$
+
+###b. Compute the quality of individuals representation, that is, the squared cosines given by:
+$cos^2(i,\ k)\ =\ \frac{z^2_{ik}}{d^2(x_i,\ g)}$, where $z_{ik}$ is the square value of the i-th individual on PC k, $x_i$ represents the row-vector of the i-th individual, and g is the centroid (i.e. average individual)
+
+And, $\sum_{k=1}^{r}{cos^2(i,\ k)}\ =\ 1$ should be satisfied.
+
+```{r part3_b}
+options(scipen=999)
+#b
+quality <- function(pca, standardized){
+  for (i in 1: nrow(z1)){
+    pca[i,] <- pca[i,]^2 / sum((standardized[i,])^2) 
+  }
+  return(pca)
+}
+
+quality_mat <- quality(z1, scale_active)
+quality_mat[,1:4]
+
+rowSums(quality_mat) #Prove the sum of every row is equal to 1.
+
+
+paste("Best represented city on the first PC:", names(which.max(quality_mat[,1])))
+paste("Best represented city on the second PC:", names(which.max(quality_mat[,2])))
+
+paste("Worst represented city on the first PC:", names(which.min(quality_mat[,1])))
+paste("Worst represented city on the second PC:", names(which.min(quality_mat[,2])))
+
+```
+Supplementary cities should not contribute to PCA, so I would not bother calculating them. Also, since my X is standardized before in part a, the g will be the origin. One thing I should be aware is that when they said the distance, it does not mean to use "dist" function embedded in R. "dist" function in R get the distance for each element in vector; however, we try to get distance of each element to zero. Also, be aware that every element of the same individual from PCA matrix is divided by the same constant. 
+
+$\\$
+
+###c. Compute the contributions of the individuals to each extracted PC, using the formula:
+$ctr(i,\ k)\ =\ \frac{m_i\ z^2_{i,k}}{\lambda_k}\ \times\ 100$, where m_i is the mass or weight of individual i, in our case: $\frac{1}{n-1}$, $z_{ik}$ is the value of k-th PC for individual i, and $\lambda_k$ is the eigenvalue associated to k-th PC.
+
+And, sum of the contributions of all observations is equal to 100. 
+
+```{r part3_c}
+options(scipen=999)
+
+contribution <- function(pca, eigen){
+  for (i in 1:ncol(pca)){
+    pca[,i] <- (pca[,i]^2 / (eigen)[i]) * 100 / (nrow(pca) - 1)
+  }
+  return(pca)
+}
+contribution_mat <- contribution(z1, eigen1)
+
+colSums(contribution_mat) #all columns are summed to 100.
+
+contribution_mat[,1:4]
+
+#The line is showing the average under uniform contribution.
+par(mfrow = c(2,3))
+for (i in 1:12){
+  plot(contribution_mat[,i], xlab = "observation", ylab = paste("contributions on PC", i))
+  abline(h = 100/(nrow(z1) - 1), lty = 1)
+}
+
+#Print out the 90 percentile of the contribution for each PC
+for (i in 1:12){
+  paste("PC", i,":",round(quantile(contribution_mat[,i], 0.9), 7))
+}
+print("So, any of points given above numbers for each PC can be regarded as outliers, and it is better to take them out, as they have influences.")
+
+print("Influential cities are below:")
+for (i in 1:ncol(contribution_mat)){
+  for (j in 1:nrow(contribution_mat)){
+    if(round(quantile(contribution_mat[,i], 0.90), 7) < contribution_mat[j,i]){
+      print(paste("Influential cities for PC", i," are", rownames(contribution_mat)[j]))
+    }
+  }
+}
+```
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+#Part 4
+
+###a. Calculate the correlation of all quantitative variables (active and supplementary) with the principal components. Store the correlations in a matrix or data frame, include row and column names. Display the first four columns. (10 pts)
+
+I include two different ways to calculate. 
+
+```{r part4_a}
+#Q. Do we include supplementary cities/individuals for question 4a (correlation matrix)?
+#Q. Also, if I use loadings and PCA matrix, do we make new one, with supplementary variables included?
+
+var_comb <- temp[1:23, 1:17]
+var_comb_scale <- scale(var_comb[,-1], T, T) #X
+var_comb_cor <- cor(var_comb_scale) #R
+var_comb_eigen <- eigen(var_comb_cor)$vectors #V
+
+#First - Multiply square root of eigenvalues of R with eigenvectors/loadings column wise (or, I can say that multiply standard deviation of PCA matrix with eigenvectors/loadings column wise)
+sd <- sqrt(eigen(var_comb_cor)$values)
+cor_mat <- round(sweep(var_comb_eigen, 2, sd, FUN = "*"), 6)
+rownames(cor_mat) <- names(var_comb[-1])
+colnames(cor_mat) <- paste0("PC", 1:16)
+
+#Second - get correlation matrix with data set and PCs. 
+cor_mat <- function(data, pc){
+  new_mat <- matrix(0, nrow = ncol(pc), ncol = ncol(pc))
+  for (i in 1:ncol(pc)){
+    for (j in 1:ncol(pc)){
+      new_mat[i,j] <- cor(data[,i], pc[,j])
+    }
+  }
+  rownames(new_mat) <- names(data)
+  colnames(new_mat) <- paste0("PC", 1:16)
+  return(round((new_mat), 6))
+}
+x <- cor_mat(var_comb[,-1], var_comb_scale %*% var_comb_eigen)
+
+#Third - get correlation matrix with standaridized matrix with PCA matrix (Realize that although you standardize the matrix and do correlation, you will still get the same correlation.)
+round(cor(var_comb_scale, var_comb_scale %*% var_comb_eigen), 6)
+
+x[,1:4]
+```
+
+$\\$
+
+###b. Make a Circle of Correlations plot between the PCs and all the quantitative variables
+(10 pts).
+
+I will make a circle of correlation plot for PC1 and PC2 only.
+```{r part4_b}
+
+
+plot(x[,1], x[,2], type = "p", main = "Correlations between variables and PCs (2 first dimensions)", xlab = "PC 1", ylab = "PC 2", xlim = c(-1.0, 1.0), ylim = c(-1.0, 1.0), asp = 1)
+
+abline(h = 0, v = 0, lty = 1)
+arrows(0, 0, x[,1], x[,2], length = 0.07, angle = 30, code = 3)
+draw.circle(0, 0, 1, border = "gray", lty = 1, lwd = 1)
+
+text(x[1:12,1], x[1:12,2], labels = as.vector(rownames(x))[1:12], pos = 2, col = "red", cex = 0.5)
+text(x[13:16,1], x[13:16,2], labels = as.vector(rownames(x))[13:16], pos = 1, col = "blue", cex = 0.5)
+```
+
+$\\$
+
+###c. Based on the above parts (a) and (b), how are the active and supplementary variables related to the components? (10 pts)
+
+Definitely, in PC1, the variable "annual" is highly correlated with other months' temperatures. And, it makes sense, since annual variable is the average of sum of temperatures. PC1 does not seem closely related to other three supplementary variables. For PC2, the motnhs for winter~Spring are related with latitude, and summer~Fall's are related with amplitude and longitude. 
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+#Part 4. Write summarizing conclusions for the performed PCA.
+
+First of all, it is clear that we only needed to retain two or three PCs for our analysis, and these were done by examining the eigen values. Second, by looking at the correlation of a circle or correlation tables (or loadings), in PC1, I conclude that all the months and annual variables are related, but also latitude is realted to PC1 (but the other direction). For PC2, the motnhs for winter~Spring are related with latitude, and summer~Fall's are related with amplitude and longitude. For PC3, there is not much of association between variables and PC. Furthermore, as I have mentioned in 3-a), supplementary cities tend to stay on the negative sides of PC1, on the other hand, active cities are staying on the positive side. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

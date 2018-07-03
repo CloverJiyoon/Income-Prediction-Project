@@ -1,0 +1,245 @@
+---
+title: "154Lab6"
+author: "Jiyoon Clover Jeong"
+date: "10/9/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+
+```{r}
+
+library(ISLR)
+library(pls)
+
+
+```
+
+
+```{r}
+
+str(Hitters, vec.len = 1)
+
+# principal component regression
+pcr_fit <- pcr(Salary ~ ., data = Hitters, scale = TRUE, validation = "none")
+names(pcr_fit)
+
+```
+
+# 1) Start with PCA
+
+```{r}
+
+hitters <- na.omit(Hitters)
+X <- model.matrix(Salary ~., hitters)
+X <- X[,-1]
+X <- scale(X)
+y <- hitters[,"Salary"]
+svd <- svd(X)
+
+Z <- X %*% svd$v  # Q
+
+head(pcr_fit$scores[,1])
+head(Z[,1])
+```
+
+
+# 2) PC Regression on the first component
+
+```{r}
+z1 <- Z[,1, drop = F]
+b1 <- solve(t(z1) %*% z1) %*% t(z1) %*% y
+b1 <- as.numeric(b1)
+b1
+
+yhat <- as.numeric(b1)* z1
+
+yhat + mean(y)     # due to the intercept
+pcr_fit$fitted.values[ , ,1] 
+
+b_pcr <- solve(t(Z) %*% Z) %*% t(Z) %*% y
+b_pcr
+
+yhat <- Z %*% b_pcr
+
+yhat + mean(y)
+
+pcr_fit$fitted.values[ , ,19]
+
+```
+
+
+
+# 4) PCR coefficients in terms of the predictor variables
+
+```{r}
+
+V <- svd$v
+
+b_star <- b1 * V[, 1, drop = F]
+
+
+b_star
+pcr_fit$coefficients[ , , 1]
+
+
+b_star <- matrix(0,19,19)
+
+
+# Cumulative
+for(i in 1:19){
+  b_star[,i] <- svd$v[,1:i] %*% solve(diag(svd$d)[1:i,1:i]) %*%
+    t(svd$u[,1:i]) %*% y
+}
+
+b_star[,1:2]
+
+
+pcr_fit$coefficients[,,1:2]
+
+
+```
+
+
+
+
+# Partial Least Squares Regression
+
+```{r}
+
+pls_fit <- plsr(Salary ~ ., data = hitters, scale = TRUE, validation = "none")
+
+
+X <- model.matrix(Salary ~., hitters)
+X <- X[,-1]
+X <- scale(X)
+y <- hitters[,"Salary"]
+#y <- scale(hitters[,"Salary"])
+
+r <- qr(X)$rank
+
+
+norm <- function(a){
+  return (sqrt(sum(a^2)))
+}
+
+b <- c(0)   # coefficients
+yhat <- matrix(0, 263, r)
+
+
+w1 <- t(X) %*% y
+w1 <- w1 / norm(w1)
+z1 <- (X %*%  w1) / as.numeric((t(w1) %*% w1))
+p1 <- (t(X) %*% z1) / as.numeric((t(z1) %*% z1))
+X <- X - z1 %*% t(p1)
+b[1] <- (t(y) %*% z1) / as.numeric((t(z1) %*% z1))   # y
+b[1] <- as.numeric(b[1])
+
+yhat[,1] <- b[1] * z1
+
+y <- y - (b[1] * z1)
+  
+w1
+pls_fit$loading.weights[,1]
+z1
+pls_fit$scores[,1]
+p1
+pls_fit$loadings[,1]
+
+b[1] 
+pls_fit$Yloadings[,1]
+
+yhat[,1]
+pls_fit$fitted.values[, , 1]
+
+# dim(w1)
+# [1] 19  1
+# > dim(z1)
+# [1] 263   1
+# > dim(p1)
+# [1] 19  1
+#   
+
+w <- matrix(0, 19,r)
+w[,1] = w1
+z <- matrix(0, 263, r)
+z[,1] = z1
+p <- matrix(0, 19, r)
+p[,1] = p1
+
+
+mypls <- function(w, z, p, X, y, b){
+  
+  for(h in 2:r){
+    w[,h] <- t(X) %*% y
+    w[,h] <- w[,h, drop = F] / norm(w[,h, drop = F])
+    
+    z[,h] <- (X %*%   w[,h, drop = F]) / 
+      as.numeric((t( w[,h, drop = F]) %*%  w[,h, drop = F]))
+    
+    p[,h] <- (t(X) %*% z[,h, drop = F]) /
+      as.numeric((t(z[,h, drop = F]) %*%  z[,h, drop = F]))
+    
+    X <- X - z[,h, drop = F] %*% t(p[,h, drop = F])
+    
+    b[h] <- (t(y) %*% z[,h, drop = F]) / 
+      as.numeric((t(z[,h, drop = F]) %*% z[,h, drop = F]))
+    
+    b[h] <- as.numeric(b[h])
+    
+    for(i in 1:h){
+      yhat[,h] <- yhat[,h] + b[i] * z[,i, drop = F]
+    }
+      
+    y <- y - (b[h] * z[,h, drop = F])
+  
+    
+  }
+  return(list(w = w, z = z, p = p, b = b, yhat = yhat))
+  
+}
+
+plsreturn <- mypls(w, z, p, X, y, b)
+
+w <- plsreturn$w
+z <- plsreturn$z
+p <- plsreturn$p
+b <- plsreturn$b    # y loadings
+yhat <- plsreturn$yhat
+
+head(w[,1:2])
+head(pls_fit$loading.weights[,1:2])
+
+head(z[,1:2])
+head(pls_fit$scores[,1:2])
+
+head(p[,1:2])
+head(pls_fit$loadings[,1:2])
+
+b[1:2]            # Q not coefficients? why Yloadings? 
+pls_fit$Yloadings[,1:2]
+
+ # y <- hitters[,"Salary"]
+( hitters[,"Salary"] - (yhat[,1] + mean(y)))
+# again, why + mean(y)? both doesn't have intercept
+
+pls_fit$residuals[,,1]
+
+
+```
+
+
+
+```{r}
+
+
+
+
+```
+

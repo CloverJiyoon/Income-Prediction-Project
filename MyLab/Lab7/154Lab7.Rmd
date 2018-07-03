@@ -1,0 +1,222 @@
+---
+title: "154Lab7"
+author: "Jiyoon Clover Jeong"
+date: "10/16/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+library(ISLR)
+
+library(pls)
+
+library(glmnet)
+
+library(DAAG)
+
+library(caret)
+
+```
+
+
+# Cross-validation for pcr() and plsr()
+
+```{r}
+
+
+n <- nrow(Hitters)
+set.seed(100)
+pcr_fit <- pcr(Salary ~ ., data = Hitters, scale = TRUE,
+validation = "CV", segments=10)
+
+
+# Q pcr_fit$validation$PRESS[1, ]   vs pcr_fit$validation$PRESS
+
+plot(pcr_fit$validation$PRESS[1, ] / n, type="l", main="PCR",
+xlab="Number of Components", ylab="CV MSE")
+
+pcr_fit$validation$PRESS[1,]
+
+
+# number of components
+which.min(pcr_fit$validation$PRESS)
+
+
+
+
+
+set.seed(200)
+plsr_fit <- plsr(Salary ~ ., data = Hitters, scale = TRUE,
+validation = "CV", segments=10)
+plot(plsr_fit$validation$PRESS[1, ] / n , type="l", main="PLSR",
+xlab="Number of Components", ylab="CV MSE")
+summary(plsr_fit)
+
+# number of components
+which.min(plsr_fit$validation$PRESS)
+```
+
+
+# Cross-validation for ridge regression and lasso
+
+Ridge : alpha = 0
+Lasso : alpha = 1
+
+```{r}
+set.seed(300)
+# code for ridge regression CV
+
+names(Hitters)
+
+data <- na.omit(Hitters)
+class(data)
+
+X <- model.matrix(Salary ~. -1,data)
+
+X <- cbind(X, Salary = data$Salary)
+
+ridgecv <- cv.glmnet(as.matrix(X[,-c(21)]), X[,21] , alpha = 0)
+
+summary(ridgecv)
+
+plot.cv.glmnet(ridgecv)
+
+
+coef(ridgecv, s = "lambda.min")
+
+summary(ridgecv)
+
+
+set.seed(400)
+# code for lasso CV
+
+lassocv <- cv.glmnet(as.matrix(X[,-c(21)]), X[,21] , alpha = 1)
+
+
+summary(lassocv)
+
+plot.cv.glmnet(lassocv)
+
+coef(lassocv, s = "lambda.min")
+
+
+
+
+```
+
+# Nested Cross Validation
+
+```{r}
+
+set.seed(250)
+
+
+# Q : why this is not MSE of pcr? 
+# msep_pcr <- MSEP(pcr_fit)
+# msep_pcr$val[1,1,]
+
+
+
+folds <- createFolds(data[,19], 10)   # return indices
+head(folds)
+
+
+# 10 folds
+# For hyperparameter tuning, use a 10-fold CV --> automatically taken care of by the function glmnet
+ols_mse <- c(0)
+pcr_mse <- c(0)
+plsr_mse <- c(0)
+ridge_mse <- c(0)
+lasso_mse <- c(0)
+
+for(i in 1:10){
+  
+  
+# Q : why warning??? 
+  
+     # olsfit <- lm(Salary ~., data = as.data.frame(X[-folds[[i]],]))
+     # ols_mse[i] <- mean((predict(olsfit, as.data.frame(X[folds[[i]],])) - X[folds[[i]], 21 ])^2)
+  
+  
+  
+    # ols predict --> data = data.frame
+    olsfit <- lm(Salary ~., data = data[-folds[[i]],])
+    ols_mse[i] <- mean((  predict(olsfit, data[folds[[i]], -19]) - data[folds[[i]], 19 ])^2)
+    
+    
+    # pcr predict <- data = matrix
+    pcrfit <- pcr(Salary~., data = as.data.frame(X[-folds[[i]],]), validation ="CV", segments = 10)
+    pcr_mse[i] <-  mean((predict(pcrfit, X[folds[[i]], -21], s = "lambda.min") - X[folds[[i]], "Salary"])^2)
+    
+    
+    # plsr 
+     plsrfit <- plsr(Salary~., data = as.data.frame(X[-folds[[i]],]), validation ="CV", segments = 10)
+    plsr_mse[i] <-  mean((predict(plsrfit, X[folds[[i]], -21], s = "lambda.min") - X[folds[[i]], "Salary"])^2)
+    
+    
+    # lasso
+    
+    lassofit <- cv.glmnet(X[-folds[[i]], -21], X[-folds[[i]], 21], 
+                          alpha = 1, nfolds = 10 )
+    lasso_mse[i] <- mean( (predict( lassofit, X[folds[[i]], -21], s = "lambda.min") - X[folds[[i]], 21])^2 )
+    
+    
+    # ridge
+    
+    ridgefit <- cv.glmnet(X[-folds[[i]], -21], X[-folds[[i]], 21], 
+                          alpha = 0, nfolds = 10)
+    ridge_mse[i] <- mean( (predict( ridgefit, X[folds[[i]], -21], s = "lambda.min") - X[folds[[i]], 21])^2 )
+}
+
+table <- rbind(ols_mse, pcr_mse, plsr_mse, lasso_mse, ridge_mse)
+
+print(table)
+
+
+MSE_means <- rowMeans(table)
+
+MSE_means
+
+
+
+cat(names(which.min(MSE_means)), "is the best model\n")
+
+```
+
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+```
+
+
+
+```{r}
+
+
+```
+
+

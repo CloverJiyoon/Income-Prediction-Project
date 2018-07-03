@@ -1,0 +1,458 @@
+---
+title: "154HW4"
+author: "Jiyoon Clover Jeong"
+date: "10/11/2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+
+library(ElemStatLearn)
+library(glmnet)
+library(leaps)
+library(pls)
+library(caret)
+
+
+```
+
+# Problem 1 (10 pts)
+
+$$r_{1,4} = \frac{cov(X1, X4)}{SD(X1)SD(X4)}$$
+and cov(X1, X4) = cov(X1, X1 + X2 + X3) = cov(X1, X1) + cov(X1, X2) + cov(X1, X3)  = var(X1) + 0 + 0 = var(X1) = $\sigma_{1}^2$
+
+var(X4) = var(X1 + X2 + X3) = var(X1) + var(X2) + var(X3) = $\sigma_{1}^2$ + $\sigma_{1}^2$ + $\sigma_{1}^2$ = 3$\sigma_{1}^2$
+
+Therefore, $$r_{1,4} = \frac{\sigma_{1}^2}{\sqrt{\sigma_{1}^2 * 3\sigma_{1}^2}} = 1/\sqrt{3} = 0.5773503$$
+
+
+$$r_{2,4} = \frac{cov(X2, X4)}{SD(X2)SD(X4)}$$
+
+
+
+and cov(X2, X4) = cov(X2, X1 + X2 + X3) = cov(X2, X1) + cov(X2, X2) + cov(X2, X3)  = var(X2)  = $\sigma_{1}^2$
+
+var(X4) = var(X1 + X2 + X3) = var(X1) + var(X2) + var(X3) = $\sigma_{1}^2$ + $\sigma_{1}^2$ + $\sigma_{1}^2$ = 3$\sigma_{1}^2$
+
+Therefore, $$r_{2,4} = \frac{\sigma_{1}^2}{\sqrt{\sigma_{1}^2 * 3\sigma_{1}^2}} = 1/\sqrt{3} = 0.5773503$$
+
+
+$$r_{3,4} = \frac{cov(X3, X4)}{SD(X3)SD(X4)}$$
+
+
+
+and cov(X3, X4) = cov(X3, X1 + X2 + X3) = cov(X3, X1) + cov(X3, X2) + cov(X3, X3)  = var(X3)  = $\sigma_{1}^2$
+
+var(X4) = var(X1 + X2 + X3) = var(X1) + var(X2) + var(X3) = $\sigma_{1}^2$ + $\sigma_{1}^2$ + $\sigma_{1}^2$ = 3$\sigma_{1}^2$
+
+Therefore, $$r_{3,4} = \frac{\sigma_{1}^2}{\sqrt{\sigma_{1}^2 * 3\sigma_{1}^2}} = 1/\sqrt{3} = 0.5773503$$
+
+
+# Problem 2 
+
+
+Show that any two components $$z_h^Tz_l = 0$$ for $$(h \neq l)$$  are indeed orthogonal. 
+
+
+** Base Case (i+1) ** 
+
+ $z_i^Tz_{i+1}$ = $z_i^T(\frac{X_iw_{i+1}}{w_{i+1}^Tw_{i+1}})$ = $\frac{1}{w_{i+1}^Tw_{i+1}}z_i^T(X_iw_{i+1})$. --------> $z_i^T(X_iw_{i+1})$ = 0. 
+
+And, $z_i^T(X_iw_{i+1})$ = $z_i^T([x_{i-1}\ -\ z_ip_i^T]w_{i+1})$ = $z_i^T([x_{i-1}\ -\ z_i[\frac{x_{i-1}^Tz_i}{z_i^Tz_i}]^T]w_{i+1})$ = $(z_i^Tx_{i-1}\ -\ z_i^Tx_{i-1})w_{i+1}$ = 0.
+
+$\\$
+
+** Recursion (i+2) ** 
+
+$z_i^Tz_{i+2}$ = $z_i^T(X_{i+1}w_{i+2})\frac{1}{w_{i+2}^Tw_{i+2}}$ = $z_i^T(X_i\ -\ z_{i+1}p_{i+1}^T)\frac{w_{i+2}}{w_{i+2}^Tw_{i+2}}$ = $(z_i^TX_i\ -\ z_i^Tz_{i+1}p_{i+1}^T)\frac{w_{i+2}}{w_{i+2}^Tw_{i+2}}$. 
+
+ $z_i^Tz_{i+1}$ = 0 as we proved in the Base case.
+ 
+ $(z_i^TX_i\ -\ z_i^Tz_{i+1}p_{i+1}^T)\frac{w_{i+2}}{w_{i+2}^Tw_{i+2}}$ = $z_i^TX_i\frac{w_{i+2}}{w_{i+2}^Tw_{i+2}}$.
+
+---->  Show $z_i^TX_i$ = 0. 
+
+$z_i^TX_i$ = $z_i^T(X_{i-1}\ -\ z_ip_i^T)$ = $z_i^T(X_{i-1}\ -\ z_i[\frac{x_{i-1}^Tz_i}{z_i^Tz_i}]^T)$ = $z_i^TX_{i-1}\ -\ z_i^TX_{i-1}$ = 0.
+
+-------->  $z_i^Tz_{i+2}$ = 0 
+
+
+Proof finished.
+
+
+
+# Problem 3
+
+
+```{r}
+length(names(prostate))
+names(prostate)
+
+train <- prostate[prostate$train == "TRUE", -10 ]
+
+test <- prostate[prostate$train == "FALSE", -10 ]
+
+
+```
+
+
+## Correlations of predictors, and some preprocessing (10 pts)
+
+```{r}
+
+
+cor(train[,-9])
+
+train_stan <- scale(train[,-9])
+
+
+```
+
+
+```{r}
+
+
+summary(train_stan)
+
+```
+
+
+
+## Least Squares Model (10 pts)
+
+```{r}
+
+train_stan <- as.data.frame(cbind(train_stan, lpsa = train$lpsa))
+
+lsfit <- lm(lpsa ~., data = train_stan)
+summary(lsfit)$coefficients[,1:3]
+
+
+```
+
+
+## Best Subset Regression (10 pts)
+
+```{r}
+
+
+subset <- regsubsets(lpsa ~., data = train_stan)
+coef(subset, 1:3)
+
+summary(subset)
+
+
+# Best number of subset
+
+
+
+minsubset <- which.min(summary(subset)$bic)
+cat("The best number of subset is ", minsubset, "\n")
+
+plot(summary(subset)$bic, type = "o")
+
+
+```
+
+
+
+
+## PCR and PLSR (40 pts)
+
+
+```{r}
+
+set.seed(10)
+
+pcr_model <- pcr(lpsa~., data = train_stan, validation = "CV")
+
+# how to change number of folds in validation?
+
+which.min(pcr_model$validation$PRESS)
+
+summary(pcr_model)
+
+
+
+# Model fits with the smallest CV-MSE of 
+cat("PCR Tuning parameter : ", which.min(pcr_model$validation$PRESS))
+
+
+print("Associated coefficients : ")
+pcr_model$coefficients[, , which.min(pcr_model$validation$PRESS)]
+
+
+
+plsr_model <- plsr(lpsa~., data = train_stan, validation = "CV")
+summary(plsr_model)
+
+
+plsr_model
+
+
+
+# Model fits with the smallest CV-MSE of 
+
+# Q  how to get CV table from summary??? 
+
+# CV MSE :  MSEP(pcr_model)
+
+cat("Plsr Tuning parameter : ", which.min(plsr_model$validation$PRESS))
+
+
+print("Associated coefficients : ")
+plsr_model$coefficients[, , which.min(plsr_model$validation$PRESS)]
+
+# fit = glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa)
+# plot(fit)
+
+
+# Standardized coefficients??
+
+#  Q   is this plot correct  --- >standardized coefficients ??? 
+
+
+# coefplot(pcr_model, ncomp = 1:8, legendpos = "bottomright", xlab = "number of components")
+# plot(pcr_model, plottype = "coefficients", ncomp = 1:8) 
+
+pcr_coefs = apply(pcr_model$coefficients, 3, function(x) x)
+
+matplot(t(pcr_coefs), type= 'l', lwd = 2, xlab = "Number of Components", ylab = "Standardized Coefficients")
+legend("topleft", colnames(pcr_coefs),col=seq_len(ncol(pcr_coefs)),cex=0.4,fill=seq_len(ncol(pcr_coefs)))
+
+matplot(t(pcr_coefs), type= 's', lwd = 2, xlab = "Number of Components", ylab = "Standardized Coefficients")
+legend("topleft", colnames(pcr_coefs),col=seq_len(ncol(pcr_coefs)),cex=0.4,fill=seq_len(ncol(pcr_coefs)))
+
+
+validationplot(pcr_model, val.type = "MSEP", ylab = "CV-MSE")
+
+#plot(pcr_model$validation$PRESS[1,], type = "o", main = "PCR")
+
+
+# coefplot(plsr_model, ncomp = 1:8, legendpos = "bottomright")
+# plot(plsr_model, plottype = "coefficients", ncomp = 1:8) 
+
+
+plsr_coefs = apply(plsr_model$coefficients, 3, function(x) x)
+
+matplot(t(plsr_coefs), type= 'l', lwd = 2, xlab = "Number of Components", ylab = "Standardized Coefficients")
+legend("topleft", colnames(plsr_coefs),col=seq_len(ncol(plsr_coefs)),cex=0.4,fill=seq_len(ncol(plsr_coefs)))
+
+
+matplot(t(plsr_coefs), type= 's', lwd = 2, xlab = "Number of Components", ylab = "Standardized Coefficients")
+legend("topleft", colnames(plsr_coefs),col=seq_len(ncol(plsr_coefs)),cex=0.4,fill=seq_len(ncol(plsr_coefs)))
+
+
+validationplot(plsr_model, val.type = "MSEP", ylab = "CV-MSE")
+
+```
+
+
+
+
+## RR and Lasso (40 pts)
+
+
+```{r}
+
+
+set.seed(10)
+
+# Fitting the model (Ridge: Alpha = 0)
+ridgecv <- cv.glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 0)
+
+ridgecv
+
+coef(ridgecv, s = "lambda.min")
+
+opt_lambda <- ridgecv$lambda.min
+opt_lambda
+
+
+# Q  lambda.min.ratio = opt_lambda
+
+
+ridge <- glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 0, lambda.min.ratio = opt_lambda)
+
+ridge <- glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 0, lambda = opt_lambda)
+
+
+
+# Q is summary enough??? 
+summary(ridge)
+
+# Q :  ridge.coef gives the best model's coefficients????
+
+
+coef(ridgecv, s = ridgecv$lambda.min)
+
+
+plot.cv.glmnet(ridgecv)
+
+
+#   Q :    ???? straight?  
+
+ridge <- glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 0)
+
+
+plot.glmnet(ridge)
+
+
+
+```
+
+
+```{r}
+
+set.seed(10)
+# Fitting the model (Lasso: Alpha = 1)
+
+
+lassocv <- cv.glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 1)
+
+lassocv
+
+opt_lambda <- lassocv$lambda.min
+opt_lambda
+
+
+lasso <- glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 1, lambda.min.ratio = opt_lambda)
+
+lasso <- glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 1, lambda= opt_lambda)
+
+
+lasso
+
+
+coef(lassocv, s = "lambda.min")
+coef(lasso, s = "lambda.min")
+
+plot.cv.glmnet(lassocv)
+
+lasso <- glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 1)
+
+
+plot.glmnet(lasso)
+
+
+```
+
+
+
+
+## Model Selection (20 pts)
+
+
+```{r}
+
+subset.coef <- coef(subset, minsubset)
+
+#  c(coef(subset, minsubset), rep(NA,6))
+
+ridge.coef <- (coef(ridgecv, s = ridgecv$lambda.1se))[1:9]  
+# Q :  s = labmda.min?
+# or coef(ridgecv)
+
+
+lasso.coef <- (coef(lassocv, s = lassocv$lambda.1se))[1:9]
+
+
+
+
+# don't recycle 
+# Q PCR, PLS intercept coefficient needed
+
+
+table <- cbind(LS = lsfit$coefficients,
+               Best_Subset = c(subset.coef, rep(0, 6)),
+              Ridge = ridge.coef , Lasso = lasso.coef, PCR =  coef(pcr_model, intercept = T), PLS = coef(plsr_model, intercept = T))
+
+table
+```
+
+
+```{r}
+
+
+y <- test[,9]
+X <- as.data.frame(scale(test[,-9]))
+
+LSmse <- mean((predict(lsfit, X) - y)^2)
+# why so huge? 
+LSmse
+
+
+# Q : what's wrong?? 
+#subsetmse <- mean(summary(subset)$rss^2)
+#subset coefficients are the same as the OLS regression coefficients with the selected variable
+subset_lm <- lm(lpsa ~ lcavol + lweight, data = train_stan)
+subsetmse <- mean((predict(subset_lm, X) - y)^2)
+subsetmse
+
+#yhat <- as.matrix(cbind(1,test[,c(1,2)])) %*% as.matrix(subset_coef)
+#  predict(subset_lm, test)  give the same results so it should be correct.
+#head(yhat)
+
+
+
+#ridgecv <- cv.glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 0)
+#opt_lambda <- ridgecv$lambda.min
+
+# Q  lambda.min.ratio = opt_lambda
+#ridge <- glmnet(as.matrix(train_stan[,-9]), train_stan$lpsa , alpha = 0, lambda.min.ratio = opt_lambda)
+
+
+
+#ridgemse <- min(ridgecv$cvm)
+ridgemse <- mean((predict(ridgecv, as.matrix(X), s = "lambda.min") - y)^2)
+
+ridgemse
+
+#lassomse <- min(lassocv$cvm)
+lassomse <- mean((predict(lassocv, as.matrix(X), s = "lambda.min") - y)^2)
+
+lassomse
+
+
+#pcrmse <- mean(pcr_model$residuals^2)
+pcrmse <- mean((predict(pcr_model, as.matrix(X), s = "lambda.min") - y)^2)
+pcrmse
+
+#plsmse <- mean(plsr_model$residuals^2)
+plsmse <- mean((predict(plsr_model, as.matrix(X), s = "lambda.min") - y)^2)
+plsmse
+
+
+Test_Error <- c(LSmse, subsetmse, ridgemse, lassomse, pcrmse, plsmse )
+
+Test_Error
+
+table <- rbind(table, Test_Error)
+
+table
+
+cat("Best model is ", colnames(table)[which.min(Test_Error)])
+
+
+```
+
+
+```{r}
+
+
+```
+
+
+```{r}
+
+
+```
+
+

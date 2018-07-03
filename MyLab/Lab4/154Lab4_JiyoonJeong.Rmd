@@ -1,0 +1,151 @@
+---
+title: "154Lab4"
+author: "Jiyoon Clover Jeong"
+date: "9/25/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+
+
+reg <-lm(mpg ~ disp, data = mtcars)
+mtcars_c <- as.data.frame(scale(mtcars, center = T, scale = F))
+reg2 <-lm(mpg ~ disp, data = mtcars_c)
+mtcars_c <- as.data.frame(scale(mtcars, center = T, scale = T))
+reg3 <-lm(mpg ~ disp, data = mtcars_c)
+
+lm(mpg ~ disp -1, data = mtcars)
+
+# mtcars has a column am for automatic transmission: 0 = automatic, 1 = manual. Find out how to use the argument subset of lm() to regress mpg on disp, with just those cars having automatic transmission.
+
+lm(mpg ~ disp, data = mtcars, subset = am == 0)
+am_0 <- mtcars %>% filter(am == 0)
+lm(mpg ~ disp, am_0)
+
+```
+
+
+
+```{r}
+reg_sum <- summary(reg)
+reg_sum
+class(reg_sum)
+names(reg_sum)
+
+```
+
+
+
+
+```{r}
+
+plot(mtcars$disp, mtcars$mpg)
+abline(reg, lwd = 2)
+
+plot.new()
+plot(mtcars$disp, mtcars$mpg)
+abline(reg, col = "Red", lty = 4, lwd = 2) #lty is a line type and lwd is line width
+
+# scatterplot with regression line
+
+
+# Here’s how to get a nicer plot using low-level plotting functions:
+plot.new()
+plot.window(xlim = c(50, 500), ylim = c(10, 40))
+points(mtcars$disp, mtcars$mpg, pch = 20, cex = 1)
+abline(reg, col = "tomato", lwd = 2) # regression line
+axis(side = 1, pos = 10, at = seq(50, 500, 50))
+axis(side = 2, las = 1, pos = 50, at = seq(10, 40, 5))
+
+
+
+ggplot(data = mtcars, aes(x = disp, y = mpg)) + geom_point() + geom_text(label = rownames(mtcars), size = 3, alpha = 0.5) +  xlim(50,500) + ylim(10, 35) + geom_smooth(method = "lm", se = FALSE) 
+
+```
+
+
+
+```{r}
+#residuals vs fitted model
+plot(reg, which = 1)
+
+# normal probability plot
+plot(reg, which = 2)
+
+reg_anova <- anova(reg)
+reg_anova
+
+
+```
+
+
+
+# beta coefficients
+XtXi <- solve(t(X) %*% X)
+XtXi %*% t(X) %*% y
+
+solve(crossprod(X, X), crossprod(X, y))
+
+=======================================
+
+
+Q is an n × n orthogonal matrix
+ R is a p × p upper triangular matrix
+QR <- qr(X)
+
+To extract the matrices of the decomposition, you have to use the companion functions qr.Q() and qr.R()
+Q <- qr.Q(QR)
+R <- qr.R(QR)
+f <- t(Q %*% y)    # y?
+
+Solving Rb = f we use the method of backsubstitution:
+backsolve(R, f)
+
+
+
+# Recover coefficients
+## Normal Equation
+
+```{r}
+
+
+X <- as.matrix(cbind(1,mtcars[,3]))
+y <- as.matrix(mtcars[,"mpg"])
+
+lm(mpg ~ disp, data = mtcars)
+beta <- solve(t(X) %*% X) %*% t(X) %*% y
+
+```
+
+
+## QR Decomposition
+
+```{r}
+
+QR <- qr(X)
+
+Q <- qr.Q(QR)
+R <- qr.R(QR)
+f <- t(Q) %*% y
+backsolve(R, f)
+
+```
+
+
+## Solve function 
+
+```{r}
+
+solve(t(X) %*% X, t(X) %*% y )
+
+solve(R, f)
+solve(R, t(Q) %*% y)
+
+```
+

@@ -1,0 +1,152 @@
+---
+title: "STAT 154 Lab 1"
+author: "Johnny Hong"
+date: "8/27/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+The objective of this lab is to review some basic matrix-vector manipulations in R. If you have any doubt about the following code, don't hesitate to come to OH and ask questions!
+
+# Basic Vector and Matrix manipulations in R
+
+```{r}
+x <- 1:9
+matrix(x, nrow=3)
+matrix(x, nrow=3, byrow=T)
+diag(nrow=5, ncol=5)
+```
+
+```{r}
+a1 <- c(2,3,6,7,10)
+a2 <- c(1.88, 2.05, 1.70, 1.60, 1.78)
+a3 <- c(80, 90, 70, 50, 75)
+A <- cbind(a1, a2, a3)
+A
+
+b1 <- c(1,4,5,8,9)
+b2 <- c(1.22,1.05,3.60,0.40,2.54)
+b3 <- c(20,40,30,80,100)
+B <- rbind(b1, b2, b3)
+B
+
+A %*% B
+B %*% A
+t(A) %*% t(B)
+t(B) %*% t(A)
+```
+
+```{r}
+head(iris)
+as.matrix(iris[, 1:4]) %*% c(1,2,3,4)
+```
+
+```{r}
+v <- 1:5
+vnorm <- function(x) {
+  as.numeric(sqrt(t(x) %*% x))
+}
+vnorm(v)
+u <- v / vnorm(v)
+u
+vnorm(u)
+```
+To do a sanity check of the `is_square()` function, I test the function using a 4-by-4 matrix $X$ and a 3-by-4 matrix $X[1:3, ]$. Note that `is_square()` returns a warning message if the input is not a square matrix.
+```{r}
+is_square <- function(X) {
+  nrow(X) == ncol(X)
+}
+mtrace <- function(X) {
+  if(!is_square(X)) warning("Input is not a square matrix. Trace cannot be computed.")
+  else sum(diag(X))
+}
+X <- matrix(1:16, ncol=4)
+mtrace(X)
+mtrace(X[1:3, ])
+```
+
+Prove that $tr(A + B) = tr(A) + tr(B)$ for every $A, B \in \mathbb{R}^{n \times n}$.
+
+*Proof.* 
+$$\text{tr}(A + B) = \sum_{i = 1}^{n} (a_{ii} + b_{ii}) = \sum_{i = 1}^{n} {a_{ii}} + \sum_{i = 1}^{n} {b_{ii}} = \text{tr}(A) + \text{tr}(B),$$
+where the middle inequality makes use of the linearity of summation.
+
+Prove that $tr(cA) = ctr(A) + tr(B)$ for every $A \in \mathbb{R}^{n \times n}$ and $c \in \mathbb{R}$.
+
+*Proof.* 
+$$\text{tr}(cA) = \sum_{i = 1}^{n} c a_{ii} = c \sum_{i = 1}^{n} a_{ii} = c \text{tr}(A),$$
+where the middle inequality makes use of the linearity of summation.
+
+Prove that $\text{tr}(X^T Y) = \text{tr}(XY^T) = \text{tr}(Y^T X) =\text{tr}(YX^T)$ for $X, Y \in \mathbb{R}^{n \times p}$.
+
+*Proof.* 
+It follows from the definition of trace that $\text{trace}(A) = \sum_{i} A_{ii} = trace(A^T)$ for any square matrix $A$. Hence $\text{tr}(X^T Y) = \text{tr}(Y^T X)$ and $\text{tr}(XY^T) = \text{tr}(YX^T)$ by the fact that $(AB)^T = B^T A^T$. It remains to show that $\text{tr}(X^T Y) = \text{tr}(YX^T)$. 
+$$\text{tr}(X^T Y) = \sum_{j = 1}^p \sum_{i = 1}^n X_{ji}Y_{ij} = \sum_{i = 1}^n \sum_{j = 1}^p Y_{ij}X_{ji}  = \text{tr}(YX^T).$$
+
+Remark: The proof above implies an important property of trace, commonly referred as the cyclic property of trace or the trace trick: for $A \in \mathbb{R}^{n \times p}$ and $B \in \mathbb{R}^{p \times n}$, $\text{tr}(AB) = \text{tr}(BA)$.
+
+# Transformation and Scaling Operations
+
+```{r}
+head(mtcars)
+M <- as.matrix(mtcars[, c("mpg", "disp", "hp", "drat", "wt")])
+M_colmean <- apply(M, 2, mean)
+Mc <- scale(M, scale=F)
+```
+
+Check that the matrix is properly mean-centered:
+```{r}
+Mc_check <- apply(M, 2, function(col) {col - mean(col)})
+all.equal(Mc_check, Mc, check.attributes=F)
+Mc_check_2 <- sweep(M, 2, M_colmean)
+all.equal(Mc_check, Mc_check_2 , check.attributes=F)
+M_max <- apply(M, 2, max)
+sweep(M, 2, M_max, "/")
+apply(M, 2, function(col) {(col - min(col)) / (max(col) - min(col))})
+```
+
+```{r}
+M_cov <- (1 / (nrow(Mc) - 1)) * t(Mc) %*% Mc
+all.equal(cov(M), M_cov)
+M_cor <- (1 / (nrow(Mc) - 1)) * t(scale(M)) %*% scale(M)
+all.equal(cor(M), M_cor)
+```
+
+Recall that if each iteration of `sapply()` returns a vector and all the vectors have the same length, the final output of `sapply()` is a matrix in which the $i$th column corresponds to the output vector for $i$th iteration.
+
+```{r, echo=TRUE}
+cyl <- factor(mtcars$cyl)
+dummify <- function(x, all=TRUE) {
+  x <- as.factor(x)
+  mat <- sapply(levels(x), function(lvl) {
+    as.integer(x == lvl)
+  })
+  if (all) mat
+  else mat[, -1]
+}
+CYL1 <- dummify(cyl, T)
+CYL2 <- dummify(cyl, F)
+CYL1
+CYL2
+```
+
+The key idea of `crosstable()` is that the dot product of the $j$th column of an $n \times p_1$ dummy matrix $X$ and the $k$th column of an $n \times p_2$ dummy matrix $Y$ gives the count of observations that are simulaneously in $X$-category $j$ and in $Y$-category $k$. More concretely,
+$$\langle (j\text{th col of }X), (k\text{th col of }Y) \rangle = \sum_{i = 1}^n I(X_{ij} = 1)I(Y_{ik} = 1) = \sum_{i = 1}^n I(X_{ij} = 1, Y_{ik} = 1),$$
+where $I(\cdot)$ is the indicator function, meaning that $I(A) = 1$ if $A$ happens and $0$ otherwise. Noting that 
+$$\langle (j\text{th col of }X), (k\text{th col of }Y) \rangle = \langle (j\text{th row of }X^T), (k\text{th col of }Y) \rangle,$$
+the cross-table can be generated via a straightforward matrix multiplication $X^T Y$.
+
+```{r, echo=TRUE}
+cyl <- factor(mtcars$cyl)
+gear <- factor(mtcars$gear)
+
+crosstable <- function(x, y) {
+  t(dummify(x)) %*% dummify(y)
+}
+
+xtb <- crosstable(cyl, gear)
+xtb
+```

@@ -1,0 +1,1166 @@
+---
+title: "Jin Kweon (3032235207) HW3"
+author: "Jin Kweon"
+date: "9/25/2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(plyr)
+library(dplyr, warn.conflicts = T)
+library(ggplot2)
+library(stats)
+library(Matrix)
+```
+
+##Name: Jin Kweon
+##Lab: 11am - 1pm (section 102) (course number: 20980)
+
+$\\$
+
+$\\$
+
+$\\$
+
+##Problem 1
+We define residual as $y\ -\ \hat{y}\ =\ e$.
+
+$\sum{(y_i\ -\ \hat{y_i})}$ = 0. So, $\sum{y_i}$ = $\sum{\hat{y_i}}$. So, $y_1\ +\ ...\ +\ y_n$ = $\hat{y_1}\ +\ ...\ +\ \hat{y_n}$. 
+
+And, it implies that we need to prove equation below:
+
+\[
+  \begin{pmatrix}
+   1 & 1 & ... & 1 \\ 
+  \end{pmatrix}
+  \begin{pmatrix}
+  y_1 \\
+  . \\
+  . \\
+  . \\
+  y_n \\
+  \end{pmatrix}
+  =
+  \begin{pmatrix}
+  1 & 1 & ... & 1 \\
+  \end{pmatrix}
+  \begin{pmatrix}
+  \hat{y_1} \\
+  . \\
+  . \\
+  . \\
+  \hat{y_n} \\
+  \end{pmatrix}
+\]
+
+Since we can always define a normal equation (even when there is no model, but we have a model. And, $b_0$ and $b_1$ are the least square estimators), I will use it. (without proving normal equation as we proved it and used it as a fact in the class)
+
+I will say 
+\[
+  \hat{\beta}
+  =
+  \begin{pmatrix}
+  b_0 \\
+  b_1 \\
+  \end{pmatrix}
+\]
+
+Normal equation is following: $X^TX\hat{\beta}$ = $X^Ty$ and since $\hat{y}$ = $X\hat{\beta}$, I can say that $X^T\hat{y}$ = $X^Ty$. 
+
+Now let's define a design matrix (and we always need to include an intercept in our design matrix and that is a part of definition).
+
+Let design matrix X with the dimension of (n) by (p+1) be following:
+\[
+X = 
+  \begin{bmatrix}
+  1 & x_{11} & ... & x_{1p} \\
+  . & . & . & . \\
+  . & . & . & . \\
+  . & . & . & . \\
+  1 & x_{n1} & ... & x_{np} \\
+  \end{bmatrix}
+\]. 
+
+So,
+\[
+X^T\hat{y} =
+  \begin{bmatrix}
+  1 & 1 & ... & 1 \\
+  . & . & . & . \\
+  . & . & . & . \\
+  . & . & . & . \\
+  x_{1p} & x_{2p} & ... & x_{np} \\
+  \end{bmatrix}
+  \hat{y}
+  =
+  \begin{bmatrix}
+  [1 & 1 & ... & 1]\ \hat{y} \\
+  [. & . & . & .]\ \hat{y}  \\
+  [. & . & . & .]\ \hat{y}  \\
+  [. & . & . & .]\ \hat{y}  \\
+  [x_{1p} & x_{2p} & ... & x_{np}]\ \hat{y}  \\
+  \end{bmatrix}
+\]
+and this is equal to 
+\[
+X^Ty =
+  \begin{bmatrix}
+  1 & 1 & ... & 1 \\
+  . & . & . & . \\
+  . & . & . & . \\
+  . & . & . & . \\
+  x_{1p} & x_{2p} & ... & x_{np} \\
+  \end{bmatrix}
+  y
+  =
+  \begin{bmatrix}
+  [1 & 1 & ... & 1]\ y \\
+  [. & . & . & .]\  y  \\
+  [. & . & . & .]\  y  \\
+  [. & . & . & .]\  y  \\
+  [x_{1p} & x_{2p} & ... & x_{np}]\  y  \\
+  \end{bmatrix}
+\].
+
+So, I can conlcude that  
+\[  
+  \begin{bmatrix}
+  [1 & 1 & ... & 1]\ \hat{y} \\
+  [. & . & . & .]\ \hat{y}  \\
+  [. & . & . & .]\ \hat{y}  \\
+  [. & . & . & .]\ \hat{y}  \\
+  [x_{1p} & x_{2p} & ... & x_{np}]\ \hat{y}  \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  [1 & 1 & ... & 1]\ y \\
+  [. & . & . & .]\  y  \\
+  [. & . & . & .]\  y  \\
+  [. & . & . & .]\  y  \\
+  [x_{1p} & x_{2p} & ... & x_{np}]\  y  \\
+  \end{bmatrix}
+\]
+and each element of vector is equal, so,
+\[  
+  \begin{bmatrix}
+  [1 & 1 & ... & 1]\ \hat{y} \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  [1 & 1 & ... & 1]\ y \\
+  \end{bmatrix}
+\] 
+is true and it implies 
+\[
+  \begin{pmatrix}
+   1 & 1 & ... & 1 \\ 
+  \end{pmatrix}
+  \begin{pmatrix}
+  y_1 \\
+  . \\
+  . \\
+  . \\
+  y_n \\
+  \end{pmatrix}
+  =
+  \begin{pmatrix}
+  1 & 1 & ... & 1 \\
+  \end{pmatrix}
+  \begin{pmatrix}
+  \hat{y_1} \\
+  . \\
+  . \\
+  . \\
+  \hat{y_n} \\
+  \end{pmatrix}
+\]
+
+
+Here is one the examples:
+```{r problem1}
+a <- lm(mpg ~ disp, data = mtcars)
+
+round(sum(a$residuals), 10)
+```
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+##Problem 2
+We examine a response variable Y in terms of two predictors X (explanatory variable) and Z. There are n observations. Let **X** (design matrix) be a matrix formed by a constant term of **1**, and the vectors **x** and **z**. 
+
+####part a
+$X^TX$ is a symmetric matrix with non-negative entries on the diagonal. 
+
+Thus, the missing values are 0, 0, and 7.
+
+And, here are the full matrix:
+and this is equal to 
+\[
+X^TX =
+  \begin{bmatrix}
+  30 & 0 & 0 \\
+  0 & 10 & 7 \\
+  0 & 7 & 15 \\
+  \end{bmatrix}
+\].
+
+$\\$
+
+####Part b
+cor(X, Z) = $\frac{\sum{(x_i\ -\ \bar{x})(z_i\ -\ \bar{z})}}{\sqrt{\sum{(x_i\ -\ \bar{x})^2}\sum{(z_i\ -\ \bar{z})^2}}}$. 
+
+And, we have a matrix 
+\[
+X^TX = 
+  \begin{bmatrix}
+  30 & 0 & 0 \\
+  0 & 10 & 7 \\
+  0 & 7 & 15 \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  ---\ 1\ --- \\
+  ---\ x\ --- \\
+  ---\ z\ --- \\
+  \end{bmatrix}
+  \begin{bmatrix}
+  | & | & | \\
+  | & | & | \\
+  | & | & | \\
+  1 & x & z \\
+  | & | & | \\
+  | & | & | \\
+  | & | & | \\
+  \end{bmatrix}
+  =
+  \begin{bmatrix}
+  \sum{1} & \sum{x_i} & \sum{z_i} \\
+  \sum{x_i} & \sum{x_i^2} & \sum{x_iz_i} \\
+  \sum{z_i} & \sum{x_iz_i} & \sum{z_i^2} \\
+  \end{bmatrix}
+\]
+So, from this matrix, I can tell that there are n = 30 observations, and $\bar{x}\ =\ \frac{1}{30}\sum{x_i}\ =\ 0$. Also, $\bar{z}\ =\ \frac{1}{30}\sum{z_i}\ =\ 0$. 
+
+So, cor(X, Z) = $\frac{\sum{(x_i\ -\ \bar{x})(z_i\ -\ \bar{z})}}{\sqrt{\sum{(x_i\ -\ \bar{x})^2}\sum{(z_i\ -\ \bar{z})^2}}}$ = $\frac{\sum{x_iz_i}}{\sqrt{\sum{x_i^2}\sum{z_i^2}}}$ = $\frac{7}{\sqrt{10}\sqrt{15}}$. 
+
+$\\$
+
+####Part c
+From the given equation $\hat{y_i}$ = $\hat{\beta_0}$ + $\hat{\beta_1}x_i$ + $\hat{\beta_2}z_i$, I can say that $\hat{\beta_0}$ = -2, $\hat{\beta_1}$ = 1, and $\hat{\beta_2}$ = 2. 
+
+And, we know that $\bar{y}$ = $\hat{\beta_0}$ + $\hat{\beta_1}\bar{x}$ + $\hat{\beta_2}\bar{z}$ (This is true if and only if we have an intercept, and this can be proved by using normal equation), so I can say that $\bar{y}$ = -2 + $\bar{x}$ + 2$\bar{z}$. And, we know what $\bar{x}$ = 0 and $\bar{z}$ = 0 are from $X^TX$. 
+
+Thus, $\bar{y}$ = -2. 
+
+$\\$
+
+####Part d
+$R^2$ = $\frac{TSS - RSS}{TSS}$ = $\frac{REGSS}{REGSS\ +\ RSS}$ and since RSS is given as 12 in the question, we only need to seek for REGSS. And, since REGSS = $\sum{(\hat{y_i}\ -\ \bar{y})^2}$ = $\sum{(-2\ +\ x_i\ +\ 2z_i\ +\ 2)^2}$ = $\sum{(x_i\ +\ 2z_i)^2}$ = $\sum{x_i^2}$ + $4\sum{x_iz_i}$ + $4\sum{z_i^2}$ = 10 + 28 + 60 = 98. So, $R^2$ = $\frac{REGSS}{TSS}$ = $\frac{98}{12\ +\ 98}$ = $\frac{98}{110}$ = $\frac{49}{55}$.
+
+Thus, $R^2$ = $\frac{49}{55}$.
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+##Problem 3
+
+####Part a
+
+```{r problem3a}
+set.seed(1)
+
+x <- rnorm(100, 0, 1)
+x
+```
+
+$\\$
+
+####Part b
+
+```{r problem3b}
+eps <- rnorm(100, 0, 0.5) #sd^2 = var
+eps
+```
+
+$\\$
+
+####Part c
+So, I can say that 
+\[
+  Y = 
+  \begin{bmatrix}
+  y_1 \\
+  y_2 \\
+  . \\
+  . \\
+  . \\
+  y_{100} \\
+  \end{bmatrix}
+  = 
+  \begin{bmatrix}
+  -1 \\
+  -1 \\
+  . \\
+  . \\
+  . \\
+  -1 \\
+  \end{bmatrix} 
+  +\
+  0.5
+  \begin{bmatrix}
+  x_1 \\
+  x_2 \\
+  . \\
+  . \\
+  . \\
+  x_{100} \\
+  \end{bmatrix}
+  +\
+  \begin{bmatrix}
+  e_1 \\
+  e_2 \\
+  . \\
+  . \\
+  . \\
+  e_{100} \\
+  \end{bmatrix}
+\]
+```{r problem3c}
+y <- -1 + 0.5*x + eps
+y
+```
+
+$\\$
+
+####Part d
+
+```{r problem3d}
+par(mfrow=c(1,2))
+plot(x, y, main = "Scatterplot between x and y")
+plot(x,-1+0.5*x, main = "Scatterplot when no noise")
+```
+Comment: They show the decent linear relationship between x and y, but definitely they do not form a perfect line. From the equation I created above, I can see that 0.5 slope (as x goes up by 1 unit, y goes up by around 0,5 unit) and the intercept will be around -1. Additionally, I plotted out the scatter when there is no normally distributed random noise, and as you can see, it will form a perfect line. 
+
+$\\$
+
+####Part e
+I will get solve it in two says: lm() and OLS least square estimator formula, $\hat{\beta}$ = $(X^TX)^{-1}X^TY$. Also, I can solve it in QR factorization. 
+
+```{r}
+par(mfrow=c(1,1))
+
+lm <- lm(y ~ x)
+beta0 <- lm$coefficients[1]
+beta1 <- lm$coefficients[2]
+
+int <- rep(1, nrow(as.matrix(x)))
+newx <- cbind(int, x)
+beta <- solve(t(newx) %*% newx) %*% t(newx) %*% y
+
+#They are equal.
+#lm$coefficients
+paste("Least square intercept will be", round(beta[1,1], 6), "and least square slope will be", round(beta[2,1], 6))
+print("Original intercept will be -1 and slope will be 0.5")
+```
+Comment: So, $\beta_0$ = -1 and $\beta_1$ = 0.5 and $\hat{\beta_0}\ \approx\ -1.018846$ and $\hat{\beta_1}\ \approx\ 0.49947$. The line is more gentle with least square estimators. 
+
+$\\$
+
+####Part f
+Theoretical regression line = $Y\ =\ -1\ +\ 0.5X$ and model is $Y\ =\ -1\ +\ 0.5X +\ \epsilon$ 
+```{r problem3f}
+plot(x, y, main = "scatter plot")
+abline(a = -1, b = 0.5, col = "red")
+abline(lm, col = "blue")
+legend("topright", legend = "Blue: OLS & Red: Theoretical") 
+```
+
+$\\$
+
+####Part g
+
+```{r problem3g}
+lm2 <- lm(y ~ x + I(x^2)) #Or, do summary(lm(y ~ poly(x, 2, raw = T)))
+y2 <- lm2$coefficients[1] + lm2$coefficients[2]*x + lm2$coefficients[3]*x^2
+plot(x, y, main = "Polynomial regression")
+
+smoothingSpline = smooth.spline(x, y2, spar = 0.5)
+lines(smoothingSpline, col = "red")
+abline(lm, col = "blue")
+
+summary(lm2)
+summary(lm)
+
+
+set.seed(1)
+new_data <- rnorm(10000, 0, 1)
+new_y <- c(lm2$coefficients[1] + lm2$coefficients[2]*new_data + lm2$coefficients[3]*(new_data)^2)
+plot(new_data, new_y, xlim = c(-2, 2), ylim = c(-2.5, 0.5), main = "polynomial regression model 2")
+```
+Comment: There is really no evidence that the quadratic term improves the model fit on both p-value analysis and graphs. P-value tells us to drop the quadratic term. Although adjusted $R^2$ goes up a little bit, I would still say quadratic term does not improve the model fit that much. (but this might not be a good way to tell, since $R^2$ always goes up as you add the variables.) Also, it looks better when I use linear fit visually. 
+
+$\\$
+
+####Part h
+Let's say the new noise eps2 $\sim$ N(0, 0.04). 
+```{r problem3h}
+#Part a
+set.seed(1)
+x2 <- rnorm(100, 0, 1)
+x2
+
+
+
+#Part b
+eps2 <- rnorm(100, 0, 0.04) #sd^2 = var
+eps2
+
+
+
+#Part c
+y2 <- -1 + 0.5*x2 + eps2
+y2
+
+
+
+#Part d
+par(mfrow=c(1,2))
+plot(x2, y2, main = "Scatterplot between x and y")
+plot(x2,-1+0.5*x2, main = "Scatterplot when no noise")
+
+
+
+#Part e
+par(mfrow=c(1,1))
+
+lm2 <- lm(y2 ~ x2)
+beta20 <- lm2$coefficients[1]
+beta21 <- lm2$coefficients[2]
+
+int <- rep(1, nrow(as.matrix(x)))
+newx2 <- cbind(int, x2)
+beta2 <- solve(t(newx2) %*% newx2) %*% t(newx2) %*% y2
+
+#They are equal.
+#lm$coefficients
+paste("Least square intercept will be", round(beta2[1,1], 6), "and least square slope will be", round(beta2[2,1], 6))
+print("Original intercept will be -1 and slope will be 0.5")
+
+
+
+#Part f 
+plot(x2, y2, main = "Scatter plot version2")
+abline(a = -1, b = 0.5, col = "red")
+abline(lm2, col = "blue")
+legend("topright", legend = "Blue: OLS & Red: Theoretical") 
+```
+
+Comment for part d: They show the decent linear relationship between x and y, but definitely they do not form a perfect line (yet form a closer to the perfect line than the one has original - noise with variance 0.25). From the equation I created above, I can see that 0.5 slope (as x goes up by 1 unit, y goes up by around 0,5 unit) and the intercept will be around -1 more clearly. Additionally, I plotted out the scatter when there is no normally distributed random noise, and as you can see, it will form a perfect line. 
+
+Comment for part e: So, $\beta_0$ = -1 and $\beta_1$ = 0.5 and $\hat{\beta_0}\ \approx\ -1.001508$ and $\hat{\beta_1}\ \approx\ 0.499958$. The line is more gentle with least square estimators. 
+
+Comment for part f: Variance is really small, the red and blue line are on the same position, and cannot tell the difference.
+
+
+
+$\\$
+
+####Part i
+Let's say the new noise eps3 $\sim$ N(0, 0.81).
+```{r problem3i}
+#Part a
+set.seed(1)
+x3 <- rnorm(100, 0, 1)
+x3
+
+
+
+#Part b
+eps3 <- rnorm(100, 0, 0.81) #sd^2 = var
+eps3
+
+
+
+#Part c
+y3 <- -1 + 0.5*x3 + eps3
+y3
+
+
+
+#Part d
+par(mfrow=c(1,2))
+plot(x3, y3, main = "Scatterplot between x and y")
+plot(x3,-1+0.5*x3, main = "Scatterplot when no noise")
+
+
+
+#Part e
+par(mfrow=c(1,1))
+
+lm3 <- lm(y3 ~ x3)
+beta30 <- lm3$coefficients[1]
+beta31 <- lm3$coefficients[2]
+
+int <- rep(1, nrow(as.matrix(x)))
+newx3 <- cbind(int, x3)
+beta3 <- solve(t(newx3) %*% newx3) %*% t(newx3) %*% y3
+
+#They are equal.
+#lm$coefficients
+paste("Least square intercept will be", round(beta3[1,1], 6), "and least square slope will be", round(beta3[2,1], 6))
+print("Original intercept will be -1 and slope will be 0.5")
+
+
+
+#Part f
+plot(x3, y3, main = "Scatter plot version2")
+abline(a = -1, b = 0.5, col = "red")
+abline(lm3, col = "blue")
+legend("topright", legend = "Blue: OLS & Red: Theoretical") 
+```
+
+Comment for part d: They show weak linear relationship between x and y. I cannot really guess the slope and intercept from that scatter plot. Additionally, I plotted out the scatter when there is no normally distributed random noise, and as you can see, it will form a perfect line. 
+
+Comment for part e: So, $\beta_0$ = -1 and $\beta_1$ = 0.5 and $\hat{\beta_0}\ \approx\ -1.030531$ and $\hat{\beta_1}\ \approx\ 0.499141$. The line is more gentle with least square estimators. 
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+##Problem 4
+$\hat{y}$ = $X\hat{\beta}$, so if we X has a full rank/columns are linearly independent, then X can be decomposed into QR. And, for each y, the equation has a unique least square: $\hat{\beta}$ = $R^{-1}Q^Ty$. 
+
+Here is a proof using **normal equation**: 
+
+$X^TX\hat{\beta}$ = $X^Ty$, and then, $(QR)^TQR\hat{\beta}$ = $(QR)^Ty$. So, $R^TQ^TQR\hat{\beta}$ = $R^TQ^Ty$, and since Q is orthonormal $Q^Q$ = $I$. So, I have $R^TR\hat{\beta}$ = $R^TQ^Ty$, and I multiply $(R^T)^{-1}$ on both sides (there should be no 0 element on the diagonal), then, I will get $R\hat{\beta}$ = $Q^Ty$.
+
+And, I am going to basically use this idea for this question. 
+
+$\\$ 
+
+Unless all the variables (i.e. the predictors and response) are mean-centered, X will be a matrix of dimension n × (p + 1), where n is the number of observations, and p is the number of predictors. In other words, X should include the column of 1’s to account for the intercept term, except for when all variables are mean-centered.
+
+==> R: we have a equation: $\hat{y}\ -\ \bar{y}$ = $r_{xy}\frac{S_y}{S_x}(x\ -\ \bar{x})$, and we make $\bar{x}$ and $\bar{y}$ being zero, they will have no intercept.
+
+```{r problem4}
+ols_fit <- function(model, response){
+  n <- nrow(model)
+  q <- ncol(model)
+  y_values <- response
+  
+  QR <- qr(model) 
+  Q <- qr.Q(QR)
+  R <- qr.R(QR)
+  
+  coefficients <- backsolve(R, crossprod(Q, y_values))
+  fitted_values <- model %*% coefficients
+  residuals <- y_values - fitted_values
+  
+  #assigning names to all the elements in the list
+  lists <- list(coefficients = coefficients, y_values = y_values, fitted_values = fitted_values,
+                residuals = residuals, n = n, q = q)
+  return(lists)
+}
+
+intercept <- rep(1, nrow(mtcars))
+X <- as.matrix(cbind(intercept, mtcars[,c(3,4)]))
+y <- mtcars$mpg
+
+
+fit <- ols_fit(X, y)
+names(fit)
+
+fit$coefficients
+
+summary(fit$fitted_values)
+
+summary(fit$residuals)
+
+#Double check with lm function
+lms <- lm(mpg ~ disp + hp, data = mtcars)$coefficients
+names(lms) <- NULL #I took out the names since lm function automatically assigned the names.
+identical((round(lms, 5)), as.numeric(round(fit$coefficients, 5)))
+```
+
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+##Problem 5
+
+####Part a
+Here is what coefficient of determination ($R^2$) is:
+
+$R^2$ = $\frac{Regss}{TSS}$ = $\frac{\sum{(\hat{y_i}\ -\ \bar{y})^2}}{\sum{(y_i\ -\ \bar{y})^2}}$. So, we need $\hat{y_i}$ (3rd list), $\bar{y}$ (mean of sum of 2nd list), and $y_i$ (2nd list) from ols_fit() function.
+```{r problem5a}
+R2 <- function(fit_list){
+  yi <- fit_list[[2]]
+  ybar <- mean(yi)
+  yhat <- fit_list[[3]]
+  
+  R_2 <- sum((yhat - ybar)^2) / sum((yi - ybar)^2)
+  
+  return(R_2)
+}
+
+R2(fit)
+```
+
+$\\$
+
+####Part b
+Here is what Residual standard error/relative standard error (RSE) is:
+
+RSE = $\sqrt{\frac{RSS}{n\ -\ p\ -\ 1}}$ = $\sqrt{\frac{\sum{(y_i\ -\ \hat{y_i})^2}}{n\ -\ p\ -\ 1}}$, where p is the number of predictors/x/explanatory variables. 
+
+Basically, p + 1 (= q) is number of columns/variables including intercept. 
+
+So, we need $\hat{y_i}$ (3rd list), $y_i$ (2nd list), number of observations (5th list), and q (6th list) from ols_fit() function.
+```{r problem5b}
+RSE <- function(fit_list){
+  yi <- fit_list[[2]]
+  yhat <- fit_list[[3]]
+  q <- fit_list[[6]]
+  n <- fit_list[[5]]
+  
+  rse <- sqrt(sum((yi - yhat)^2) / (n - q))
+  return(rse)
+}
+
+RSE(fit)
+```
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+##Problem 6
+
+####Part a
+Use your ols_fit() and R2() functions!!! I did not use RSE() function just because the problem set did not say to use RSE() function. 
+```{r problem6a}
+data <- download.file("https://raw.githubusercontent.com/ucb-stat154/stat154-fall-2017/master/data/prostate.txt", destfile = "prostate.txt")
+
+data <- read.table("prostate.txt", header = T, stringsAsFactors = T)
+
+intercept <- rep(1, nrow(data))
+response <- as.matrix(data$lpsa)
+predictor <- as.matrix(cbind(intercept, data$lcavol))
+
+
+fit2 <- ols_fit(predictor, response)
+fit2
+
+#double check with lm() function.
+lm(lpsa ~ lcavol, data = data)$coefficients
+fit2[[1]]
+
+paste("Fitted values for lpsa as a response and lcavol as a predictor a are",
+      round(fit2[[1]][1,1], 6), "and", round(fit2[[1]][2,1], 6))
+
+
+
+r2fit2 <- R2(fit2)
+r2fit2
+#doulbe check with lm() summary.
+summary(lm(lpsa ~ lcavol, data = data))$r.squared
+
+
+rse2 <- sqrt(sum((fit2[[2]] - fit2[[3]])^2) / (nrow(data) - fit2[[6]]))
+rse2
+
+paste("Coefficient of determination and RSE are", round(R2(fit2), 6),
+      "and", round(rse2, 6), "respectively.")
+```
+
+$\\$
+
+####Part b - 1
+```{r problem6b1}
+response <- as.matrix(data$lpsa)
+predictor <- cbind(predictor, data$lweight)
+
+fit3 <- ols_fit(predictor, response)
+fit3
+
+#double check with lm() function.
+lm(lpsa ~ lcavol + lweight, data = data)$coefficients
+fit3[[1]]
+
+r2fit3 <- R2(fit3)
+r2fit3
+#doulbe check with lm() summary.
+summary(lm(lpsa ~ lcavol + lweight, data = data))$r.squared
+
+
+rse3 <- sqrt(sum((fit3[[2]] - fit3[[3]])^2) / (nrow(data) - fit3[[6]]))
+rse3
+
+paste("Coefficient of determination and RSE are", round(R2(fit3), 6),
+      "and", round(rse3, 6), "respectively.")
+```
+
+$\\$
+
+####Part b - 2
+```{r problem6b2}
+response <- as.matrix(data$lpsa)
+predictor <- cbind(predictor, data$svi)
+
+fit4 <- ols_fit(predictor, response)
+fit4
+
+#double check with lm() function.
+lm(lpsa ~ lcavol + lweight + svi, data = data)$coefficients
+fit4[[1]]
+
+r2fit4 <- R2(fit4)
+r2fit4
+#doulbe check with lm() summary.
+summary(lm(lpsa ~ lcavol + lweight + svi, data = data))$r.squared
+
+
+rse4 <- sqrt(sum((fit4[[2]] - fit4[[3]])^2) / (nrow(data) - fit4[[6]]))
+rse4
+
+paste("Coefficient of determination and RSE are", round(R2(fit4), 6),
+      "and", round(rse4, 6), "respectively.")
+```
+
+$\\$
+
+####Part b - 3
+```{r problem6b3}
+response <- as.matrix(data$lpsa)
+predictor <- cbind(predictor, data$lbph)
+
+fit5 <- ols_fit(predictor, response)
+fit5
+
+#double check with lm() function.
+lm(lpsa ~ lcavol + lweight + svi + lbph, data = data)$coefficients
+fit5[[1]]
+
+r2fit5 <- R2(fit5)
+r2fit5
+#doulbe check with lm() summary.
+summary(lm(lpsa ~ lcavol + lweight + svi + lbph, data = data))$r.squared
+
+
+rse5 <- sqrt(sum((fit5[[2]] - fit5[[3]])^2) / (nrow(data) - fit5[[6]]))
+rse5
+
+paste("Coefficient of determination and RSE are", round(R2(fit5), 6),
+      "and", round(rse5, 6), "respectively.")
+```
+
+$\\$
+
+####Part b - 4
+```{r problem64}
+response <- as.matrix(data$lpsa)
+predictor <- cbind(predictor, data$age)
+
+fit6 <- ols_fit(predictor, response)
+fit6
+
+#double check with lm() function.
+lm(lpsa ~ lcavol + lweight + svi + lbph + age, data = data)$coefficients
+fit6[[1]]
+
+r2fit6 <- R2(fit6)
+r2fit6
+#doulbe check with lm() summary.
+summary(lm(lpsa ~ lcavol + lweight + svi + lbph + age, data = data))$r.squared
+
+
+rse6 <- sqrt(sum((fit6[[2]] - fit6[[3]])^2) / (nrow(data) - fit6[[6]]))
+rse6
+
+paste("Coefficient of determination and RSE are", round(R2(fit6), 6),
+      "and", round(rse6, 6), "respectively.")
+```
+
+$\\$
+
+####Part b - 5
+```{r problem6b5}
+response <- as.matrix(data$lpsa)
+predictor <- cbind(predictor, data$lcp)
+
+fit7 <- ols_fit(predictor, response)
+fit7
+
+#double check with lm() function.
+lm(lpsa ~ lcavol + lweight + svi + lbph + age + lcp, data = data)$coefficients
+fit7[[1]]
+
+r2fit7 <- R2(fit7)
+r2fit7
+#doulbe check with lm() summary.
+summary(lm(lpsa ~ lcavol + lweight + svi + lbph + age + lcp, data = data))$r.squared
+
+
+rse7 <- sqrt(sum((fit7[[2]] - fit7[[3]])^2) / (nrow(data) - fit7[[6]]))
+rse7
+
+paste("Coefficient of determination and RSE are", round(R2(fit7), 6),
+      "and", round(rse7, 6), "respectively.")
+```
+
+$\\$
+
+####Part b - 6
+```{r problem6b6}
+response <- as.matrix(data$lpsa)
+predictor <- cbind(predictor, data$pgg45)
+
+fit8 <- ols_fit(predictor, response)
+fit8
+
+#double check with lm() function.
+lm(lpsa ~ lcavol + lweight + svi + lbph + age + lcp + pgg45, data = data)$coefficients
+fit8[[1]]
+
+r2fit8 <- R2(fit8)
+r2fit8
+#doulbe check with lm() summary.
+summary(lm(lpsa ~ lcavol + lweight + svi + lbph + age + lcp + pgg45, data = data))$r.squared
+
+
+rse8 <- sqrt(sum((fit8[[2]] - fit8[[3]])^2) / (nrow(data) - fit8[[6]]))
+rse8
+
+paste("Coefficient of determination and RSE are", round(R2(fit8), 6),
+      "and", round(rse8, 6), "respectively.")
+```
+
+$\\$
+
+####Part b - 7
+```{r problem6b7}
+response <- as.matrix(data$lpsa)
+predictor <- cbind(predictor, data$gleason)
+
+fit9 <- ols_fit(predictor, response)
+fit9
+
+#double check with lm() function.
+lm(lpsa ~ lcavol + lweight + svi + lbph + age + lcp + pgg45 + gleason, data = data)$coefficients
+fit9[[1]]
+
+r2fit9 <- R2(fit9)
+r2fit9
+#doulbe check with lm() summary.
+summary(lm(lpsa ~ lcavol + lweight + svi + lbph + age + lcp + pgg45 + gleason, data = data))$r.squared
+
+
+rse9 <- sqrt(sum((fit9[[2]] - fit9[[3]])^2) / (nrow(data) - fit9[[6]]))
+rse9
+
+paste("Coefficient of determination and RSE are", round(R2(fit9), 6),
+      "and", round(rse9, 6), "respectively.")
+```
+
+$\\$
+
+####Part c
+```{r problem6c}
+r2_list <- c(r2fit2, r2fit3, r2fit4, r2fit5, r2fit6, r2fit7, r2fit8, r2fit9)
+rse_list <- c(rse2, rse3, rse4, rse5, rse6, rse7, rse8, rse9)
+
+par(mfrow = c(1,2))
+plot(r2_list, ylab = "R^2", main = "Coefficient of determination")
+plot(rse_list, ylab = "RSE", main = "RSE")
+
+```
+
+Comment: $R^2$ strictly goes up, as we add variables. $R^2$ = $\frac{Regss}{TSS}$ = $\frac{\sum{(\hat{y_i}\ -\ \bar{y})^2}}{\sum{(y_i\ -\ \bar{y})^2}}$. Since RSS strictly goes down as we add variables, we can say $R^2$ should go up always. 
+
+However, RSE is different. RSE = $\sqrt{\frac{RSS}{n\ -\ p\ -\ 1}}$ = $\sqrt{\frac{\sum{(y_i\ -\ \hat{y_i})^2}}{n\ -\ p\ -\ 1}}$, where p is the number of predictors/x/explanatory variables. Although RSE is a function of RSS and we know RSS goes down as we add variables, since the denominator changes as we add variables, RSE sometimes goes up although we add varaibles. But, in general, RSE should have a trend of going down. 
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+$\\$
+
+##Problem 7
+
+####Data importing
+```{r problem7}
+data2 <- download.file("http://www-bcf.usc.edu/~gareth/ISL/Auto.data", destfile = "auto.txt")
+
+data2 <- read.table("auto.txt", header = T, stringsAsFactors = T)
+```
+
+$\\$
+
+####Part a
+Scatterplot matrix
+```{r problem7a}
+plot(data2)
+```
+
+$\\$
+
+####Part b
+```{r problem7b}
+cor_dat <- data2[,-ncol(data2)] #exclude name variable.
+cor_dat$horsepower <- as.numeric(cor_dat$horsepower) #horsepower is factor.
+
+cor(cor_dat)
+```
+
+$\\$
+
+####Part c
+Year, origin, and cylinder should be considred as dummy variables, but since professor did not mention it, I will just regard them as quantitaitive/numerical. 
+```{r problem7c}
+lms <- lm(mpg ~., data = cor_dat)
+summary(lms)
+```
+Comment: 
+
+**• Is there a relationship between the predictors and the response?**
+
+As we can see from the p-values, some of the predictors do not form a a good linear relationship with the response such as cylinders and horsepower (with significance level $\alpha$ = 0.05). Also, I think year, origin, and cylinder should be regarded as categorical/dummy variables rather than just putting them into lm() function as quantitative variables.
+
+$\\$
+
+**• Which predictors appear to have a statistically significant relationship to the response?**
+
+By looking at p-values, I will say weight and year are the most significant predictors. Also, origin shows quite high significance, but again, since origin should be considered as dummy variable, this might not be correct.
+
+$\\$
+
+**• What does the coefficient for the year variable suggest?**
+
+When we consider all the other variables being fixed, as year goes up by 1 unit, mpg will goes up by 0.7 unit.
+
+
+$\\$
+
+####Part d
+Leverage plot shows how each of the fitted value is influential. (and this helps to spot the outliers)
+```{r problem7d}
+plot(lms)
+
+```
+Comment:
+
+When I fit the plot with fitted values v.s. residuals, they show the pattern. This implies that our linear modeling does violate our assumption (we assumed that $\hat{y}$ is independent with residuals). Also, the variance of residual seems to increase as fitted values go up, and this is heteroscedasitic. 
+
+We can say that there are some outliers, but I will not say there is any unusual **large** outliers for this. 
+
+There is an observation on the far right side (showing 14 on the dot) with unusual high leverage. 
+
+$\\$
+
+####Part e
+If we use *, we include both of main/single and interaction effects, and if we use :, we include only interaction effect. 
+```{r problem7e}
+lms2 <- lm(mpg ~ weight*year, data = cor_dat)
+summary(lms2)
+```
+Comment: 
+Yes! the interaction definitely appears to be statistically significant, so we might need to investigate further. Statisticians always investigate interaction effect first, and if there is some statistical significance, there is no use to investigate single effect. 
+
+$\\$
+
+####Part f
+```{r problem7f}
+#Only X's were transformed.
+log_dat <- log(cor_dat)
+log_dat <- log_dat[,-1]
+log_dat <- cbind(mpg = cor_dat$mpg, log_dat)
+
+lms_log <- lm(mpg ~., data = log_dat)
+summary(lms_log)
+
+
+
+
+
+root_dat <- sqrt(cor_dat)
+root_dat <- root_dat[,-1]
+root_dat <- cbind(mpg = cor_dat$mpg, root_dat)
+
+lms_root <- lm(mpg ~., data = root_dat)
+summary(lms_root)
+
+  
+  
+  
+
+
+square_dat <- (cor_dat)^2
+square_dat <- square_dat[,-1]
+square_dat <- as.data.frame(cbind(mpg = cor_dat$mpg, square_dat))
+
+lms_square <- lm(mpg ~., data = square_dat)
+summary(lms_square)
+
+
+
+
+
+
+
+
+
+#X and y are both tranformed. 
+log_dat2 <- log(cor_dat)
+
+lms_log2 <- lm(mpg ~., data = log_dat2)
+summary(lms_log2)
+
+
+
+
+
+
+root_dat2 <- sqrt(cor_dat)
+
+lms_root2 <- lm(mpg ~., data = root_dat2)
+summary(lms_root2)
+
+
+
+
+
+
+
+square_dat2 <- as.data.frame((cor_dat)^2)
+
+lms_square2 <- lm(mpg ~., data = square_dat2)
+summary(lms_square2)
+
+
+
+
+
+
+
+
+
+
+#Only y's are transformed.
+log_mpg <- log(cor_dat[,1])
+log_dat3 <- cbind(mpg = log_mpg, cor_dat[,-1])
+
+lms_log3 <- lm(mpg ~., data = log_dat3)
+summary(lms_log3)
+
+
+
+
+
+root_mpg <- sqrt(cor_dat[,1])
+root_dat3 <- cbind(mpg = root_mpg, cor_dat[,-1])
+
+lms_root3 <- lm(mpg ~., data = root_dat3)
+summary(lms_root3)
+
+  
+  
+  
+
+
+square_mpg <- (cor_dat[,1])^2
+square_dat3 <- as.data.frame(cbind(mpg = square_mpg, cor_dat[,-1]))
+
+lms_square3 <- lm(mpg ~., data = square_dat3)
+summary(lms_square3)
+
+
+
+
+
+
+
+#Diagnostic plot for log transformation on x only
+plot(lms_log)
+
+#Diagnostic plot for square root transformation on x only
+plot(lms_root)
+
+#Diagnostic plot for square transformation on x only
+plot(lms_square)
+
+
+
+#Diagonostic plot for log transformation on both x and y 
+plot(lms_log2)
+
+#Diagnostic plot for square root transformation on both x and y
+plot(lms_root2)
+
+#Diagnostic plot for square transformation on both x and y
+plot(lms_square2)
+
+
+
+#Diagonostic plot for log transformation on y only 
+plot(lms_log3)
+
+#Diagnostic plot for square root transformation on y only
+plot(lms_root3)
+
+#Diagnostic plot for square transformation on y only
+plot(lms_square3)
+
+
+```
+
+Comment: 
+I think log transformation makes the linear modelling better when I look at the plot of fitted values v.s. residuals. 
+
+
+
+
+
+
+
+
