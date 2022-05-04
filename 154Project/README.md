@@ -1,4 +1,4 @@
-# Stat 154 Final Project Fall 2017
+# Machine Learning Income Prediction Project
 Stat 154 Machine Learning at UC Berkeley
 
 ## Description: In this project, we analyze Census income data set by Ronny Kohavi and Barry Becker. 
