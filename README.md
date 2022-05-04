@@ -1,5 +1,7 @@
 ## Income Prediction by 15 different varibles
 
-This repository holds the course materials for the Fall 2017 edition of 
-__Statistics 154: Modern Statistical Prediction and Machine Learning__ at UC Berkeley.
 
+Based on 15 different variables on individual samples, perform income prediction to determine whether a person makes over 50K a year!
+This project utilized various machine learning and statistical prediction.
+
+Please check the report folder for the final outcome.
